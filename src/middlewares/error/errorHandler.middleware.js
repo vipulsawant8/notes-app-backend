@@ -25,6 +25,7 @@ const errorHandler = (err, req, res, next) => {
 		const collection = getCollectionName(err);
 		const fields = Object.keys(err.keyPattern).join(",");
 
+		let message;
 		if(collection === "notes") {
 			message = "Note with same Title Exists";
 		} else {
