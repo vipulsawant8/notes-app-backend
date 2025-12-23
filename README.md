@@ -1,129 +1,92 @@
-# Notes API — CRUD with Pagination (Backend)
+# Notes App — Backend (Node.js + Express + MongoDB)
 
-Backend API for a **Notes application** built with **Node.js**, **Express**, and **MongoDB**.  
-Supports full CRUD operations on notes with **pagination**, **pinning**, and
-sorting by latest updates.
+![Render Deployment](https://img.shields.io/badge/render-deployed-success?logo=render&logoColor=white)
+![License](https://img.shields.io/github/license/vipulsawant8/notes-app-backend)
 
-Designed to demonstrate clean backend architecture, authentication middleware,
-and real-world data querying patterns.
+Backend API for the **Notes application**, built using **Node.js**, **Express**, and **MongoDB**.
+
+This service handles **authentication**, **authorization**, and **notes management**, and is designed to work with a separately deployed React + Redux frontend.
+
+Built to demonstrate **real-world backend architecture**, secure auth patterns, and clean API design suitable for **portfolio and interview review**.
+
+---
+
+## Live API
+
+- **Backend Base URL:** https://notes-app-rha3.onrender.com
+- **Frontend Repository:** https://github.com/vipulsawant8/notes-app-frontend
+- **Live Frontend:** https://notes-app-pi-mauve.vercel.app
 
 ---
 
 ## Features
 
-### Authentication
-- User registration and login
-- Cookie-based authentication
-- Protected routes using middleware
-
-### Notes (CRUD)
-- Create, read, update, delete notes
-- Pin / unpin notes
+- User authentication (register / login / logout)
+- JWT-based access & refresh tokens
+- HTTP-only cookie handling
+- Protected routes via middleware
+- Notes CRUD operations
 - Pagination support
-- Sorted results:
-  - `pinned: 1` (pinned notes first)
-  - `updatedAt: -1` (latest updated notes first)
-
-### Architecture Highlights
-- Modular route & controller structure
+- Pin / unpin notes
+- Sorted responses (pinned first, latest updated)
 - Centralized error handling
 - Environment-based configuration
-- Clean separation of concerns
+- Production-ready project structure
 
 ---
 
 ## Tech Stack
+
 - Node.js
 - Express.js
 - MongoDB + Mongoose
-- Cookie-parser
-- dotenv
-- REST API
+- JWT Authentication
+- Cookie-based sessions
+- ESLint
 
 ---
 
-## Folder Structure
-```
-src
-├── controllers
-│   ├── auth.controller.js
-│   └── note.controller.js
-├── db
-│   └── connectDB.js
-├── middlewares
-│   ├── auth
-│   │   └── verifyLogin.js
-│   └── error
-│       └── errorHandler.middleware.js
-├── models
-│   ├── notes.model.js
-│   └── user.model.js
-├── routes
-│   ├── auth.routes.js
-│   └── note.route.js
-├── constants
-│   └── setCookieOptions.js
-├── utils
-│   └── ApiError.js
-├── app.js
-└── server.js
-```
+## Demo Account (For Reviewers)
+
+- **Email:** demo.user@notes.test
+- **Password:** Demo@1234
+
+All notes are **fictional test data** (pop-culture inspired).
+No real user data is stored.
 
 ---
 
-## Pagination & Sorting Logic
-
-Notes are returned using the following priority:
-
-1. **Pinned notes first**
-2. **Most recently updated notes next**
-
-MongoDB query pattern:
-
-```js
-.sort({ pinned: -1, updatedAt: -1 })
-```
-
-Pagination is handled using `page` and `limit` query parameters.
-
----
-
-## Setup
-
-### Install dependencies
-```bash
-npm install
-```
-
-### Environment Variables
-
-Create a `.env` file using the provided example:
+## Environment Setup
 
 ```bash
 cp .env.example .env
 ```
 
-Required variables:
+### Example `.env`
 
 ```env
-PORT=4000
-DB_CONNECT_STRING=your_mongodb_connection_string
-CORS_ORIGIN=http://localhost:5173
-```
+PORT=5000
+NODE_ENV=development
 
-> `.env` is ignored by Git. Never commit secrets.
+MONGO_URI=your_mongodb_connection_string
+
+ACCESS_TOKEN_SECRET=your_access_token_secret
+REFRESH_TOKEN_SECRET=your_refresh_token_secret
+
+CORS_ORIGIN=your_frontend_url
+```
 
 ---
 
-## Run Server
+## Running Locally
 
 ```bash
+npm install
 npm run dev
 ```
 
 ---
 
-## Notes for Reviewers
+## License
 
-This project is built for demonstration and interview purposes.  
-All data is test data and may be reset periodically.
+MIT
