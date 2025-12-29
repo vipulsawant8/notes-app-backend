@@ -5,7 +5,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 
 import authRoutes from "./routes/auth.routes.js";
-import noteRoutes from "./routes/note.route.js";
+import noteRoutes from "./routes/note.routes.js";
 
 import errorHandler from './middlewares/error/errorHandler.middleware.js';
 
