@@ -15,7 +15,7 @@ const fetchNotes = asyncHandler( async (req, res) => {
 	const user = req.user;
 
 	const page = Math.max(1, Number(req.query.page) || 1);
-	const limit = 10;
+	const limit = 12;
 
 	if (process.env.NODE_ENV === "development") {
 		
