@@ -27,7 +27,7 @@ const errorHandler = (err, req, res, next) => {
 
 		let message;
 		if(collection === "notes") {
-			message = "Note with same Title Exists";
+			message = "A note with this title already exists in your account.";
 		} else {
 			message = `${fields} already exists in ${collection}`;
 		}

@@ -55,14 +55,14 @@ const newNote = asyncHandler( async (req, res) => {
 	const title = req.body.title?.trim();
 	const content = req.body.content?.trim();
 
-	if (!title) throw new ApiError(400, "Please add a title to your note");
+	if (!title) throw new ApiError(400, "Add a title before adding the note.");
 
 	const existingNote = await Note.findOne({ authorID: user._id, title });
-	if (existingNote) throw new ApiError(400, "Note title already exists for this user");
+	// if (existingNote) throw new ApiError(400, "A note with this title already exists in your account.");
 
 	const note = await Note.create({ authorID: user._id, title, content });
 
-	const response = { statusCode: 201, message:"Note created successfully", data: note };
+	const response = { statusCode: 201, message:`"${note.title}" was created`, data: note };
 	return res.status(response.statusCode).json(response);
 });
 
@@ -81,13 +81,13 @@ const updateNote = asyncHandler( async (req, res) => {
 	const title = req.body.title?.trim();
 	const content = req.body.content?.trim();
 	
-	if (!Types.ObjectId.isValid(noteID)) throw new ApiError(400, "Invalid Note ID");
+	if (!Types.ObjectId.isValid(noteID)) throw new ApiError(400, "Unable to update the note. The note could not be identified.");
 
 	const note = await Note.findOneAndUpdate({ authorID: user._id, _id: noteID }, { title, content }, { new: true }).lean();
 
-	if (!note) throw new ApiError(404, "Not Not Found");
+	if (!note) throw new ApiError(404, "This note no longer exists or you don't have permission to update it.");
 
-	const response = { statusCode: 200, message: "Note Updated Successfully", data: note };
+	const response = { statusCode: 200, message: `"${note.title}" was updated`, data: note };
 	return res.status(response.statusCode).json(response);
 });
 
@@ -102,12 +102,12 @@ const deleteNote = asyncHandler( async (req, res) => {
 	const user = req.user;
 	const noteID = req.params.id;
 	
-	if (!Types.ObjectId.isValid(noteID)) throw new ApiError(400, "Invalid Note ID");
+	if (!Types.ObjectId.isValid(noteID)) throw new ApiError(400, "Unable to delete the note. The note could not be identified.");
 	
 	const note = await Note.findOneAndDelete({ _id: noteID, authorID: user._id }).lean();
-	if (!note) throw new ApiError(404, "Note not found");
+	if (!note) throw new ApiError(404, "This note no longer exists or you don't have permission to delete it.");
 
-	const response = { statusCode: 200, message: "Note Deleted Successfully", data: note }
+	const response = { statusCode: 200, message: `"${note.title}" was deleted`, data: note }
 
 	return res.status(response.statusCode).json(response);
 } );
@@ -126,17 +126,17 @@ const updatePin = asyncHandler( async (req, res) => {
 	
 	const pin = req.body.status;
 
-	if (!Types.ObjectId.isValid(noteID)) throw new ApiError(400, "Invalid Note ID");
+	if (!Types.ObjectId.isValid(noteID)) throw new ApiError(400, "Unable to pin/unpin the note. The note could not be identified.");
 
 	const pinCount = await Note.countDocuments({ authorID: user._id, pinned: true });
 
-	if (pin && pinCount >=3) throw new ApiError(400, "You can only pin 3 documents");
+	if (pin && pinCount >=3) throw new ApiError(400, "You can pin up to 3 documents only.");
 
 	const note = await Note.findOneAndUpdate({ authorID: user._id, _id: noteID }, { pinned: pin }, { new: true }).lean();
 
-	if (!note) throw new ApiError(404, "Not Not Found");
+	if (!note) throw new ApiError(404, "This note no longer exists or you don't have permission to pin/unpin it.");
 
-	const response = { statusCode: 200, message: `Note ${ pin ? "Pinned" : "Unpinned"} Successfully`, data: note };
+	const response = { statusCode: 200, message: `"${note.title}" was ${ pin ? "Pinned" : "Unpinned"}`, data: note };
 	return res.status(response.statusCode).json(response);
 });
 

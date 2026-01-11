@@ -36,13 +36,13 @@ const registerUser = asyncHandler( async (req, res) => {
 	if (!email || !name || !password) throw new ApiError(400, "All Fields are required");
 
 	const user = await User.findOne({ email });
-	if (user) throw new ApiError(400, "Email is already in use");
+	if (user) throw new ApiError(400, "An account with this email already exists. Try logging in.");
 
 	const newUser = await User.create({ email, password, name });
 
 	const userResponse = newUser.toJSON();
 
-	const response = { message: "User registred", data: userResponse, success: true };
+	const response = { message: "Account created successfully.", data: userResponse, success: true };
 	return res.status(200).json(response);
 } );
 
@@ -73,7 +73,7 @@ const loginUser = asyncHandler( async (req, res) => {
 
 	const validUserJSON = validUser.toJSON();
 
-	const response = { message: "User logged-in successfully", data: validUserJSON , success: true };
+	const response = { message: "Logged in successfully.", data: validUserJSON , success: true };
 	return res.status(200)
 	.cookie('accessToken', accessToken, setCookieOptions('accessToken'))
 	.cookie('refreshToken', refreshToken, setCookieOptions('refreshToken'))
@@ -86,7 +86,7 @@ const logoutUser = asyncHandler( async (req, res) => {
 
 	await User.findByIdAndUpdate(user._id, { $set: { refreshToken: null } });
 
-	const response = { message: "User logged-out successfully", success: true };
+	const response = { message: "Logged out successfully.", success: true };
 	return res.status(200)
 	.clearCookie('accessToken')
 	.clearCookie('refreshToken')
@@ -96,8 +96,8 @@ const logoutUser = asyncHandler( async (req, res) => {
 const getMe = asyncHandler( async (req, res) => {
 
 	const user = req.user;
-	
-	const response = { message: "User fetched", data: user };
+
+	const response = { message: "Profile loaded successfully.", data: user };
 	return res.status(200).json(response);
 } );
 
@@ -126,7 +126,7 @@ const refreshAccessToken = asyncHandler( async (req, res) => {
 
 	const validUserJSON = validUser.toJSON();
 
-	const response = { message: "User logged-in successfully", data: validUserJSON, success: true };
+	const response = { message: "Session extended successfully.", data: validUserJSON, success: true };
 	return res.status(200)
 	.cookie('accessToken', accessToken, setCookieOptions('accessToken'))
 	.cookie('refreshToken', refreshToken, setCookieOptions('refreshToken'))
