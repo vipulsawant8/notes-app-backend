@@ -12,6 +12,7 @@ import errorHandler from './middlewares/error/errorHandler.middleware.js';
 const app = e();
 
 app.disable('x-powered-by');
+app.set("trust proxy", true);
 
 const allowedOrigins = process.env.CORS_ORIGIN.split(',');
 if (process.env.NODE_ENV === "development") console.log("Allowed CORS Origins :", allowedOrigins);
