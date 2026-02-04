@@ -71,7 +71,7 @@ If refresh validation fails, **the session is invalidated** and the user must re
 src
 ├── app.js
 ├── constants
-│   └── setCookieOptions.js
+│   └── cookieOptions.js
 ├── controllers
 │   ├── auth.controller.js
 │   └── note.controller.js

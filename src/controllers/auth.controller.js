@@ -2,7 +2,7 @@ import asyncHandler from "express-async-handler";
 import User from "../models/user.model.js";
 import ApiError from "../utils/ApiError.js";
 
-import setCookieOptions from "../constants/setCookieOptions.js";
+import { setCookieOptions, clearCookieOptions } from "../constants/cookieOptions.js";
 
 import jwt from 'jsonwebtoken';
 
@@ -121,8 +121,8 @@ const logoutUser = asyncHandler( async (req, res) => {
 
 	const response = { message: "Logged out successfully.", success: true };
 	return res.status(200)
-	.clearCookie('accessToken')
-	.clearCookie('refreshToken')
+	.clearCookie('accessToken', clearCookieOptions('accessToken'))
+	.clearCookie('refreshToken', clearCookieOptions('refreshToken'))
 	.json(response);
 } );
 

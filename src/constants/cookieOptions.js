@@ -37,4 +37,4 @@ const clearCookieOptions = name => {
 	return config[name] || null;
 };
 
-export default { setCookieOptions, clearCookieOptions };
+export { setCookieOptions, clearCookieOptions };
