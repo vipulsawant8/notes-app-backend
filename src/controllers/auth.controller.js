@@ -108,7 +108,6 @@ const logoutUser = asyncHandler( async (req, res) => {
 		return res.status(401)
 		.clearCookie('accessToken')
 		.clearCookie('refreshToken')
-		.status(200)
 		.json({ message: "Unauthorized.", success: false });
 	}
 	

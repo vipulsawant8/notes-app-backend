@@ -1,12 +1,12 @@
-const setCookieOptions = name => {
-
-	const isProd = process.env.NODE_ENV === "production";
+const isProd = process.env.NODE_ENV === "production";
 	
-	const base = {
-		secure: isProd,
-		httpOnly: true,
-		sameSite: isProd ? "none" : "lax"
-	};
+const base = {
+	secure: isProd,
+	httpOnly: true,
+	sameSite: isProd ? "none" : "lax"
+};
+
+const setCookieOptions = name => {
 
 	const config = {
 		accessToken: {
@@ -22,4 +22,19 @@ const setCookieOptions = name => {
 	return config[name] || null;
 };
 
-export default setCookieOptions;
+const clearCookieOptions = name => {
+
+	const config = {
+		accessToken: {
+			...base,
+			maxAge: 0
+		},
+		refreshToken: {
+			...base,
+			maxAge: 0
+		}
+	 };
+	return config[name] || null;
+};
+
+export default { setCookieOptions, clearCookieOptions };
