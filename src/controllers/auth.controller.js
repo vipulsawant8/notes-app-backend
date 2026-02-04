@@ -105,7 +105,8 @@ const logoutUser = asyncHandler( async (req, res) => {
 		decodedToken = jwt.verify(incomingToken, process.env.REFRESH_TOKEN_SECRET);
 	} catch (error) {
 		
-		return res.clearCookie('accessToken')
+		return res.status(401)
+		.clearCookie('accessToken')
 		.clearCookie('refreshToken')
 		.status(200)
 		.json({ message: "Logged out successfully.", success: true });
