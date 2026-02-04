@@ -109,7 +109,7 @@ const logoutUser = asyncHandler( async (req, res) => {
 		.clearCookie('accessToken')
 		.clearCookie('refreshToken')
 		.status(200)
-		.json({ message: "Logged out successfully.", success: true });
+		.json({ message: "Unauthorized.", success: false });
 	}
 	
 	// await User.findByIdAndUpdate(user._id, { $set: { refreshToken: null } });
