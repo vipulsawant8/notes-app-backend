@@ -1,7 +1,7 @@
 import { connect } from "mongoose";
 import User from "../models/user.model.js";
 import Note from "../models/notes.model.js";
-import notes from "../seeds.json" with { type: "json" };
+// import notes from "../seeds.json" with { type: "json" };
 
 const connectDB = async () => {
 
@@ -25,8 +25,8 @@ const connectDB = async () => {
 
 		await User.syncIndexes();
 		await Note.syncIndexes();
-		await Note.insertMany(notes);
-		console.log("document inserted");
+		// await Note.insertMany(notes);
+		// console.log("document inserted");
 	} catch (error) {
 		
 		console.log("MongoDB Connection Error :", error);
