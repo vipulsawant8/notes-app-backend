@@ -5,6 +5,13 @@ import ApiError from "../utils/ApiError.js";
 import { setCookieOptions, clearCookieOptions } from "../constants/cookieOptions.js";
 
 import jwt from 'jsonwebtoken';
+import Otp from "../models/otp.model.js";
+import { sendEmail } from "../utils/sendEmail.js";
+
+const OTP_EXIPRY = 10 * 60 * 1000;
+const RESEND_COUNTDOWN = 60 * 1000;
+const VERIFY_WINDOW = 10 * 60 * 1000;
+const MAX_ATTEMPTS = 5;
 
 // const generateAccessRefreshToken = async (id) => {
 const generateAccessRefreshToken = async ({ userId, deviceId, userAgent, ipAddress }) => {
@@ -30,6 +37,63 @@ const generateAccessRefreshToken = async ({ userId, deviceId, userAgent, ipAddre
 	return tokens;
 };
 
+const sendOtp = asyncHandler( async (req, res) => {
+
+	const { email } = req.body;
+
+	if (!email) throw new ApiError(400, "Email is required");
+
+	const userExists = await User.findOne({ email }).select("-password -refreshTokens");
+	if (userExists) throw new ApiError(400, "Email already in use please login");
+
+	const existingOtp = await Otp.findOne({ email });
+	if (existingOtp) {
+		const timeSinceLastOtp = Date.now() - existingOtp.createdAt;
+
+		if (timeSinceLastOtp < RESEND_COUNTDOWN) {
+			
+			const waitTime = Math.ceil((RESEND_COUNTDOWN - timeSinceLastOtp)/1000);
+			throw new ApiError(429, `Please wait ${waitTime} seconds before requesting another OTP`)
+		}
+		
+		await Otp.deleteMany({ email });
+	}
+
+	const otp = Math.floor(100000 + Math.random() * 900000).toString();
+	await Otp.create({ email, otp, expiresAt: Date.now() + OTP_EXIPRY });
+	
+	await sendEmail({ to: email, subject: "OTP verification", text: `Your otp is ${otp}` });
+
+	const response = { success: true, message: "Otp Sent" };
+	return res.status(200).json(response);
+} );
+
+const verifyOtp = asyncHandler( async (req, res) => {
+
+	const { email, otp } = req.body;
+	if (!otp) throw new ApiError(400, "Please enter Otp.");
+
+	const record = await Otp.findOne({ email });
+	if (!record) throw new ApiError(400, "OTP not found.");
+
+	if (record.attempts >= MAX_ATTEMPTS) throw new ApiError(429, "Too many attempts");
+	if (record.expiresAt < Date.now()) throw new ApiError(400, "Otp expired");
+	if (record.otp.trim() !== otp.trim()) {
+		record.attempts += 1;
+		await record.save({ validateBeforeSave: false });
+		throw new ApiError(400, "Invalid Otp");
+	}
+
+	record.verified = true;
+	record.verifiedAt = Date.now();
+	// record.attempts = 0;
+
+	await record.save();
+
+	const response = { message: "Otp verified", success: true };
+	return res.status(200).json(response);
+} );
+
 const registerUser = asyncHandler( async (req, res) => {
 
 	if (process.env.NODE_ENV === "development") {
@@ -44,12 +108,24 @@ const registerUser = asyncHandler( async (req, res) => {
 
 	if (!email || !name || !password) throw new ApiError(400, "All Fields are required");
 
-	const user = await User.findOne({ email });
-	if (user) throw new ApiError(400, "An account with this email already exists. Try logging in.");
+	// const user = await User.findOne({ email });
+	// if (user) throw new ApiError(400, "An account with this email already exists. Try logging in.");
+
+	// const otpRecord = await Otp.findOne({ email, verified: true, verifiedAt: { $gte: Date.now() - VERIFY_WINDOW }});
+	// if (!otpRecord) throw new ApiError(400, "Verification expired or invalid");
+
+	const otpRecord = await Otp.findOne({ email });
+	if (!otpRecord) throw new ApiError(400, "No verification record found.");
+
+	if (!otpRecord.verified) throw new ApiError(400, "Please verify E-mail first then attempt to register");
+	
+	const verificationDeadline = otpRecord.verifiedAt.getTime() + VERIFY_WINDOW;
+	if (Date.now() > verificationDeadline) throw new ApiError(400, 'Verification expired. Please verify again.');
 
 	const newUser = await User.create({ email, password, name });
-
 	const userResponse = newUser.toJSON();
+
+	await Otp.deleteMany({ email });
 
 	const response = { message: "Account created successfully.", data: userResponse, success: true };
 	return res.status(200).json(response);
@@ -183,4 +259,4 @@ const refreshAccessToken = asyncHandler( async (req, res) => {
 	.json(response);
 } );
 
-export { registerUser, loginUser, logoutUser, getMe, refreshAccessToken }; 
+export { sendOtp, verifyOtp, registerUser, loginUser, logoutUser, getMe, refreshAccessToken }; 

@@ -7,3 +7,5 @@ logs/
 *.log
 
 node_modules/
+app_password.txt
+seeds.json

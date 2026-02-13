@@ -8,8 +8,7 @@ const userSchema = new Schema({
 		
 		type: String,
 		require: true,
-		trim: true,
-		lowercase: true
+		trim: true
 	},
 	email:{
 		
@@ -24,6 +23,10 @@ const userSchema = new Schema({
 		require: true,
 		trim: true
 	},
+	// verified: {
+	// 	type: Boolean,
+	// 	default: false
+	// },
 	refreshTokens : 
 		[
 			{
@@ -49,7 +52,8 @@ const userSchema = new Schema({
 		]
 }, { timestamps: true });
 
-userSchema.index({ email: 1 }, { unique:true })
+userSchema.index({ email: 1 }, { unique:true });
+// userSchema.index({ verified: 1 });
 
 userSchema.pre('save', async function () {
 

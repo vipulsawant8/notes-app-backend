@@ -8,6 +8,8 @@
 
 **Live API (Render):** https://notes-app-backend-prbr.onrender.com
 
+---
+
 Backend service for the Notes application, built with Node.js, Express, and MongoDB.
 
 This API provides authentication, authorization, and notes persistence using a cookie-based session model with access and refresh token rotation.  
@@ -30,6 +32,38 @@ All security-sensitive logic (tokens, cookies, session validation) is handled ex
 
 This backend implements **cookie-based authentication with refresh token rotation**.
 
+### Email Verification (OTP-Based Registration)
+
+New user registration follows a multi-step email verification flow before account creation.
+
+#### Registration Flow
+
+1. User submits email → POST /auth/send-otp
+2. Server:
+	- Generates 6-digit OTP
+	- Stores OTP with expiry
+	- Sends OTP via email
+	- Enforces resend cooldown (60 seconds)
+3. User submits OTP → POST /auth/verify-otp
+	- OTP validated against:
+		- Correct value
+		- Expiry window
+		- Attempt limit (max 5 attempts)
+		- On success → OTP marked as verified
+4. User completes registration → POST /auth/register
+	- Requires verified OTP
+	- Password is hashed
+	- Account is created
+	- OTP record is deleted
+
+### OTP Security Rules
+
+- OTP expires in 10 minutes
+- Maximum 5 verification attempts
+- Resend OTP cooldown: 60 seconds
+- OTP verification required before account creation
+- OTP records are removed after successful registration
+
 ### Key characteristics
 
 - Access and refresh tokens are issued by the server
@@ -41,17 +75,18 @@ This backend implements **cookie-based authentication with refresh token rotatio
 
 ### Session Lifecycle
 
-1.  User logs in with credentials and a `deviceId`
-2. Server issues:
+1. New user completes OTP-based email verification and registration
+2.  User logs in with credentials and a `deviceId`
+3. Server issues:
 	- Short-lived access token
 	- Long-lived refresh token
-3. Tokens are set as HTTP-only cookies
-4. Protected routes validate the access token
-5. When access token expires:
+4. Tokens are set as HTTP-only cookies
+5. Protected routes validate the access token
+6. When access token expires:
 	- Client calls `/auth/refresh-token`
 	- Server validates and rotates refresh token
 	- New cookies are issued
-6. On logout:
+7. On logout:
 	- Refresh token for that device is removed from the database
 	- Cookies are cleared
 
@@ -85,13 +120,15 @@ src
 │       └── errorHandler.middleware.js
 ├── models
 │   ├── notes.model.js
-│   └── user.model.js
+│   ├── otp.model.js
+│	└── user.model.js
 ├── routes
 │   ├── auth.routes.js
 │   └── note.routes.js
 ├── server.js
 └── utils
-	└── ApiError.js
+	├── ApiError.js
+	└── sendEmail.js
 ```
 
 ## Folder responsibilities
@@ -181,6 +218,9 @@ The frontend does not manage tokens and relies entirely on server-side session h
 - Logout invalidates refresh token in database
 - No sensitive data returned in API responses
 - Error messages sanitized in production
+- Email ownership verified via OTP before account creation
+- OTP attempt limit to prevent brute-force attacks
+- Resend cooldown to prevent email spam
 
 This backend is intended for portfolio and demo usage, not high-risk production systems.
 
