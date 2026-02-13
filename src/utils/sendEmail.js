@@ -24,7 +24,7 @@ const sendEmail = async ({ to, subject, text }) => {
 
     } catch (error) {
         
-        if (process.env.NODE_ENV === "development") console.error("Email send failed", error);
+        console.error("Email send failed", error);
         throw new ApiError(500, "Unable to send email");
     }
 };

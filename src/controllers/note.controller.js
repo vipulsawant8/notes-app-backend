@@ -7,7 +7,7 @@ import ApiError from '../utils/ApiError.js';
 const fetchNotes = asyncHandler( async (req, res) => {
 	console.log("req.params :", req.params);
 
-	if (process.env.NODE_ENV === "development") {
+	{
 
 		console.log("fetchNotes controller");
 	}
@@ -17,7 +17,7 @@ const fetchNotes = asyncHandler( async (req, res) => {
 	const page = Math.max(1, Number(req.query.page) || 1);
 	const limit = 12;
 
-	if (process.env.NODE_ENV === "development") {
+	{
 		
 		console.log("page :", page);
 		console.log("limit :", limit);
@@ -33,7 +33,7 @@ const fetchNotes = asyncHandler( async (req, res) => {
 
 	const result = await Note.paginate(filter, options);
 	
-	// if (process.env.NODE_ENV === "development")  console.log("result: ", result);
+	//  console.log("result: ", result);
 
 	return res.status(200).json({
 		message: "Notes fetched successfully",
@@ -44,7 +44,7 @@ const fetchNotes = asyncHandler( async (req, res) => {
 
 const newNote = asyncHandler( async (req, res) => {
 
-	if (process.env.NODE_ENV === "development") {
+	{
 
 		console.log("newNote controller");
 		console.log("body :", req.body);
@@ -68,7 +68,7 @@ const newNote = asyncHandler( async (req, res) => {
 
 const updateNote = asyncHandler( async (req, res) => {
 
-	if (process.env.NODE_ENV === "development") {
+	{
 
 		console.log("updateNote controller");
 		console.log("body :", req.body);
@@ -93,7 +93,7 @@ const updateNote = asyncHandler( async (req, res) => {
 
 const deleteNote = asyncHandler( async (req, res) => {
 
-	if (process.env.NODE_ENV === "development") {
+	{
 
 		console.log("deleteNote controller");
 		console.log('req.params :', req.params);
@@ -114,7 +114,7 @@ const deleteNote = asyncHandler( async (req, res) => {
 
 const updatePin = asyncHandler( async (req, res) => {
 
-	if (process.env.NODE_ENV === "development") {
+	{
 
 		console.log("updatePin controller");
 		console.log("body :", req.body);

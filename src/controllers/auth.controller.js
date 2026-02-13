@@ -96,7 +96,7 @@ const verifyOtp = asyncHandler( async (req, res) => {
 
 const registerUser = asyncHandler( async (req, res) => {
 
-	if (process.env.NODE_ENV === "development") {
+	{
 
 		console.log("registerUser Handler");
 		console.log("req.body :", req.body);
@@ -133,7 +133,7 @@ const registerUser = asyncHandler( async (req, res) => {
 
 const loginUser = asyncHandler( async (req, res) => {
 
-	if (process.env.NODE_ENV === "development") {
+	{
 
 		console.log("loginUser controller");
 		console.log("req.body :", req.body);
@@ -150,7 +150,7 @@ const loginUser = asyncHandler( async (req, res) => {
 
 	if (!validUser) throw new ApiError(401, "Invalid-credentials");
 
-	if (process.env.NODE_ENV === "development") console.log('validUser :', validUser);
+	console.log('validUser :', validUser);
 
 	const isPasswordVerified = await validUser.verifyPassword(password);
 
@@ -212,7 +212,7 @@ const getMe = asyncHandler( async (req, res) => {
 
 const refreshAccessToken = asyncHandler( async (req, res) => {
 
-	if (process.env.NODE_ENV === "development") {
+	{
 		
 		console.log("refresh controller");
 		console.log("req.body :", req.body);
@@ -229,7 +229,7 @@ const refreshAccessToken = asyncHandler( async (req, res) => {
 
 	const validUser = await User.findById(decodedToken.id);
 	
-	if (process.env.NODE_ENV === "development") console.log('validUser :', validUser);
+	console.log('validUser :', validUser);
 
 	// if (!validUser || !validUser.refreshToken) throw new ApiError(401, "Unauthorized");
 
