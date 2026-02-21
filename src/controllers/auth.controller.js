@@ -7,16 +7,11 @@ import { setCookieOptions, clearCookieOptions } from "../constants/cookieOptions
 import crypto from "crypto";
 
 import jwt from 'jsonwebtoken';
-import Otp from "../models/otp.model.js";
 import { sendEmail } from "../utils/sendEmail.js";
 
-const OTP_EXPIRY = 10 * 60 * 1000;
-const OTP_RESEND_COUNTDOWN = 60 * 1000;
-const VERIFY_WINDOW = 5 * 60 * 1000;
-const OTP_MAX_ATTEMPTS = 5;
-const OTP_LOCK_WINDOW = 15 * 60 * 1000;
-
 const REFRESH_TOKEN_EXPIRY = 14 * 24 * 60 * 60 * 1000;
+
+const VERIFICATION_TOKEN_EXPIRY = 15 * 60 * 1000;
 
 const generateAccessRefreshToken = async ({ userId, deviceId, userAgent, ipAddress }) => {
 	const user = await User.findById(userId);
@@ -62,197 +57,104 @@ const clearAndRespond = function (res) {
     .clearCookie('accessToken', clearCookieOptions('accessToken'))
     .clearCookie('refreshToken', clearCookieOptions('refreshToken'))
     .json({ message: "Logged out successfully.", success: true });
-}
-
-const enforceLock = (lockUntil, action, unit = "minutes") => {
-
-	const remainingMs = lockUntil - Date.now();
-
-	if (remainingMs <= 0) return;
-
-	const unitMap = { minutes: 60000, seconds: 1000 };
-
-	const remaining = Math.ceil(remainingMs / unitMap[unit]);
-
-	throw new ApiError(429, `Wait ${remaining} ${unit} before ${action}.`);
 };
 
-const enforceCooldown = (remainingMs, action) => {
+const createAccount = asyncHandler(async (req, res) => {
 
-	if (remainingMs <= 0) return;
+	const { email, name, password } = req.body;
 
-	const remaining = Math.ceil(remainingMs / 1000);
+	if (!email || !name || !password)
+		throw new ApiError(400, ERRORS.MISSING_FIELDS);
 
-	throw new ApiError(429, `Wait ${remaining} seconds before ${action}.`);
-};
+	let existingUser = await User.findOne({ email });
 
-const sendOtp = asyncHandler( async (req, res) => {
-
-	const { email } = req.body;
-	let otp;
-
-	if (process.env.NODE_ENV === "development") {
-		console.log("sendOtp Handler");
-		console.log('req.body :', req.body);
+	// Case 1: User already verified
+	if (existingUser && existingUser.isVerified) {
+		throw new ApiError(400, "Account already exists. Please login.");
 	}
 
-	if (!email) throw new ApiError(400, "Email is required");
+	// Generate verification token
+	const rawToken = crypto.randomBytes(32).toString("hex");
+	const hashedToken = crypto
+		.createHash("sha256")
+		.update(rawToken)
+		.digest("hex");
 
-	const userExists = await User.findOne({ email }).select("-password -refreshTokens");
-	
-	if (process.env.NODE_ENV === "development") {
-		console.log('userExists :', userExists);
-	}
+	const tokenExpiry = new Date(Date.now() + VERIFICATION_TOKEN_EXPIRY);
 
-	if (userExists) throw new ApiError(400, "Email already in use please login");
+	// Case 2: User exists but NOT verified → resend flow
+	if (existingUser && !existingUser.isVerified) {
 
-	const existingOtp = await Otp.findOne({ email });
-	
-	if (process.env.NODE_ENV === "development") {
-		console.log('existingOtp :', existingOtp);
-	}
+		existingUser.name = name; // optional: update name
+		existingUser.password = password; // assume pre-save hashing
+		existingUser.verificationToken = hashedToken;
+		existingUser.verificationTokenExpiry = tokenExpiry;
 
-	if (existingOtp) {
-		
-		if (existingOtp.lockUntil) {
-			
-			if (existingOtp.lockUntil > Date.now()) {
-				return enforceLock(existingOtp.lockUntil, "registering");
-			}
+		await existingUser.save();
 
-			if (existingOtp.lockUntil <= Date.now() ) {
-				await Otp.updateOne(
-					{ email },
-					{ $set: { lockUntil: null, resendAttemps: 0 } }
-				);
-			}
-		}
-
-		const timeSinceLastOtp = Date.now() - existingOtp.updatedAt;
-		if (timeSinceLastOtp < OTP_RESEND_COUNTDOWN) {
-			const remainingMs = OTP_RESEND_COUNTDOWN - timeSinceLastOtp;
-			return enforceCooldown(remainingMs, "requesting new Otp");
-		}
-
-		const updatedOtp = await Otp.findOneAndUpdate(
-			{ email },
-			{ $inc: { resendAttemps : 1 } },
-			{ new: true }
-		);
-
-		if (updatedOtp.resendAttemps >= OTP_MAX_ATTEMPTS) {
-			await Otp.updateOne(
-				{ email },
-				{ $set: { lockUntil: new Date(Date.now() + OTP_LOCK_WINDOW), resendAttemps: 0 } }
-			);
-			throw new ApiError(429, `Too many Attemps.`);
-		}
-		
-		otp = Math.floor(100000 + Math.random() * 900000).toString();
-		await Otp.updateOne(
-			{ email },
-			{ $set: { otp, expiresAt: Date.now() + OTP_EXPIRY } }
-		);
 	} else {
-
-		otp = Math.floor(100000 + Math.random() * 900000).toString();
-		await Otp.create({ email, otp, expiresAt: Date.now() + OTP_EXPIRY });
-	}
-	
-	await sendEmail({ to: email, subject: "OTP verification", text: `Your otp is ${otp}` });
-
-	const response = { success: true, message: "Otp Sent" };
-	return res.status(200).json(response);
-} );
-
-const verifyOtp = asyncHandler( async (req, res) => {
-
-	const { email, otp } = req.body;
-
-	if (process.env.NODE_ENV === "development") {
-		console.log("VerifyOtp Handler");
-		console.log('req.body :', req.body);
+		// Case 3: New user
+		existingUser = await User.create({
+			email,
+			name,
+			password,
+			verificationToken: hashedToken,
+			verificationTokenExpiry: tokenExpiry
+		});
 	}
 
-	if (!otp) throw new ApiError(400, "Please enter Otp.");
+	const verificationLink =
+		`${process.env.CLIENT_URL}/verify-email?token=${rawToken}`;
 
-	const record = await Otp.findOne({ email });
-	if (process.env.NODE_ENV === "development") {
-		console.log('record :', record);
-	}
-	if (!record) throw new ApiError(400, "OTP not found.");
+	await sendEmail({
+		to: email,
+		subject: "Verify Your Email",
+		text: `Click the link to verify your email: ${verificationLink}`
+	});
 
-	if (record.lockUntil) {
-		if(record.lockUntil > new Date()) {
-			return enforceLock(record.lockUntil, "registering");
-		}
-		if(record.lockUntil < new Date()) {
-			await Otp.updateOne(
-				{ email },
-				{ lockUntil: null, verifyAttempts: 0 }
-			);
-		}
-	}
-	
-	if (record.expiresAt < Date.now()) throw new ApiError(400, "Otp expired");
-	const updatedRecord = await Otp.findOneAndUpdate(
-		{ email },
-		{ $inc : { verifyAttempts: 1 } },
-		{ new: true});
+	return res.status(201).json({
+		success: true,
+		message: "Please verify your email to activate your account."
+	});
+});
 
-	if (updatedRecord.otp.trim() !== otp.trim()) {
-		if (updatedRecord.verifyAttempts >= OTP_MAX_ATTEMPTS) {
-			
-			await Otp.updateOne(
-				{ email },
-				{ $set: { lockUntil: new Date(Date.now() + OTP_LOCK_WINDOW), verifyAttempts: 0 } }
-			);
-			throw new ApiError(429, "Too many attempts");
-		}
-		throw new ApiError(400, "Invalid Otp");
-	}
+const verifyEmail = asyncHandler(async (req, res) => {
 
-	record.verified = true;
-	record.verifiedAt = new Date();
+	const token = req.query.token || req.body.token;
 
-	await record.save();
+	if (!token)
+		throw new ApiError(400, "Invalid verification request.");
 
-	const response = { message: "Otp verified", success: true };
-	return res.status(200).json(response);
-} );
+	const hashedToken = crypto
+		.createHash("sha256")
+		.update(token)
+		.digest("hex");
 
-const registerUser = asyncHandler( async (req, res) => {
+	const user = await User.findOne({
+		verificationToken: hashedToken,
+		verificationTokenExpiry: { $gt: Date.now() }
+	});
 
-	if (process.env.NODE_ENV === "development") {
-		console.log("registerUser Handler");
-		console.log("req.body :", req.body);
-	}
+	if (!user)
+		throw new ApiError(400, "Invalid or expired token.");
 
-	const email = req.body.email;
-	const name = req.body.name;
-	const password = req.body.password;
+	if (user.isVerified)
+		return res.status(200).json({
+			success: true,
+			message: "Email already verified."
+		});
 
-	if (!email || !name || !password) throw new ApiError(400, ERRORS.MISSING_FIELDS);
+	user.isVerified = true;
+	user.verificationToken = undefined;
+	user.verificationTokenExpiry = undefined;
 
-	const otpRecord = await Otp.findOne({ email });
-	if (!otpRecord) throw new ApiError(400, "No verification record found.");
+	await user.save();
 
-	if (!otpRecord.verified) throw new ApiError(400, "Please verify E-mail first then attempt to register");
-	
-	const verificationDeadline = otpRecord.verifiedAt.getTime() + VERIFY_WINDOW;
-	if (Date.now() > verificationDeadline) {
-		await Otp.deleteMany({ email });
-		throw new ApiError(400, 'Verification expired. Please verify again.');
-	}
-
-	const newUser = await User.create({ email, password, name });
-	const userResponse = newUser.toJSON();
-
-	await Otp.deleteMany({ email });
-
-	const response = { message: "Account created successfully.", data: userResponse, success: true };
-	return res.status(200).json(response);
-} );
+	return res.status(200).json({
+		success: true,
+		message: "Email verified successfully."
+	});
+});
 
 const loginUser = asyncHandler( async (req, res) => {
 
@@ -266,27 +168,23 @@ const loginUser = asyncHandler( async (req, res) => {
 	const password = req.body.password;
 	const deviceId = req.body.deviceId;
 
-
 	if (!identity || !password || !deviceId) throw new ApiError(400, "All Fields are required");
 
-	const validUser = await User.findOne({ email: identity }).select("-refreshToken");
-	if (process.env.NODE_ENV === "development") console.log('validUser :', validUser);
+	const user = await User.findOne({ email: identity }).select("-refreshToken");
+	if (process.env.NODE_ENV === "development") console.log('user :', user);
 
-	if (!validUser) throw new ApiError(401, "Invalid-credentials");
+	if (!user) throw new ApiError(401, "Invalid-credentials");
 
-	console.log('validUser :', validUser);
+	if (user && !user.isVerified) throw new ApiError(403, "Please verify your email first.");
 
-	const isPasswordVerified = await validUser.verifyPassword(password);
+	const isPasswordVerified = await user.verifyPassword(password);
 	if (process.env.NODE_ENV === "development") console.log('isPasswordVerified :', isPasswordVerified);
 
 	if (!isPasswordVerified) throw new ApiError(401, "Invalid-credentials");
 
-	// const { accessToken, refreshToken } = await generateAccessRefreshToken(validUser._id);
-	const { accessToken, refreshToken } = await generateAccessRefreshToken({ userId: validUser._id, deviceId, userAgent: req.get('User-Agent') || '', ipAddress: req.ip });
+	const { accessToken, refreshToken } = await generateAccessRefreshToken({ userId: user._id, deviceId, userAgent: req.get('User-Agent') || '', ipAddress: req.ip });
 
-	const validUserJSON = validUser.toJSON();
-
-	const response = { message: "Logged in successfully.", data: validUserJSON , success: true };
+	const response = { message: "Logged in successfully.", data: user, success: true };
 	return res.status(200)
 	.cookie('accessToken', accessToken, setCookieOptions('accessToken'))
 	.cookie('refreshToken', refreshToken, setCookieOptions('refreshToken'))
@@ -398,4 +296,4 @@ const refreshAccessToken = asyncHandler( async (req, res) => {
 		});
 } );
 
-export { sendOtp, verifyOtp, registerUser, loginUser, logoutUser, getMe, refreshAccessToken }; 
+export { createAccount, verifyEmail, loginUser, logoutUser, getMe, refreshAccessToken }; 

@@ -23,10 +23,10 @@ const userSchema = new Schema({
 		required: true,
 		trim: true
 	},
-	// verified: {
-	// 	type: Boolean,
-	// 	default: false
-	// },
+	isVerified: {
+		type: Boolean,
+		default: false
+	},
 	refreshTokens : 
 		[
 			{
@@ -51,7 +51,13 @@ const userSchema = new Schema({
 					type: Date
 				}
 			}
-		]
+		],
+	verificationToken: {
+		type: String
+	},
+	verificationTokenExpiry: {
+		type: Date
+	}
 }, { timestamps: true });
 
 userSchema.index({ email: 1 }, { unique:true });
