@@ -25,8 +25,6 @@ const connectDB = async () => {
 
 		await User.syncIndexes();
 		await Note.syncIndexes();
-		// await Note.insertMany(notes);
-		// console.log("document inserted");
 	} catch (error) {
 		
 		console.log("MongoDB Connection Error :", error);

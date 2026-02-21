@@ -4,37 +4,44 @@ const otpSchema = new Schema({
     
     email: {
         type: String,
-        require: true,
+        required: true,
         lowercase: true,
         trim: true
     },
     otp: {
         type: String,
-        require: true
+        required: true
     },
     expiresAt: {
         type: Date,
-        require: true
+        required: true,
+        index: {
+            expires: 0
+        }
     },
     verified: {
         type: Boolean,
-        require: false,
+        required: false,
         default: false
     },
     verifiedAt: {
         type: Date,
-        require: false,
+        required: false,
         default: null
     },
-    attempts: {
+    verifyAttempts: {
         type: Number,
-        require: false,
+        required: false,
         default: 0
     },
-    // used: {
-    //     type: Boolean,
-    //     default: false
-    // }
+    lockUntil: {
+        type: Date
+    },
+    resendAttemps:{
+        type: Number,
+        required: true,
+        default: 0
+    }
 }, {
     timestamps: true
 });
