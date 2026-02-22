@@ -7,3 +7,7 @@ export const paginationQuerySchema = z.object({
 export const addNoteSchema = z.object({
     title: z.string().trim().min(1, "Title is required")
 });
+
+export const updateNoteSchema = z.object({
+    title: z.string().trim().min(1, "Title is empty")
+});
