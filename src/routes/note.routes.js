@@ -1,18 +1,20 @@
 import { Router } from "express";
-
-import { fetchNotes, newNote, updateNote, deleteNote, updatePin } from "../controllers/note.controller.js";
 import verifyLogin from "../middlewares/auth/verifyLogin.js";
+import { validate } from "../middlewares/validate/validate.middleware.js";
+import { paginationQuerySchema, addNoteSchema } from "../validations/note.schema.js";
+import { objectIdParamSchema } from "../validations/auth.schema.js";
+import { fetchNotes, newNote, updateNote, deleteNote, updatePin } from "../controllers/note.controller.js";
 
 const router = Router();
 
 router.use(verifyLogin);
 
-router.get('/', fetchNotes);
-router.post('/', newNote);
+router.get('/', validate({ params: paginationQuerySchema }), fetchNotes);
+router.post('/', validate({ body: addNoteSchema }), newNote);
 
-router.patch('/:id', updateNote);
-router.delete('/:id', deleteNote);
+router.patch('/:id', validate({ params: objectIdParamSchema }), updateNote);
+router.delete('/:id', validate({ params: objectIdParamSchema }), deleteNote);
 
-router.patch('/:id/update-pin', updatePin);
+router.patch('/:id/update-pin', validate({ params: objectIdParamSchema }), updatePin);
 
 export default router;

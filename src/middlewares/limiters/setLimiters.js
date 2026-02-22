@@ -1,14 +1,17 @@
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import ApiError from "../../utils/ApiError.js";
 
 const createLimiter = (windowMs, max, message, keyType = "ip") =>
 	rateLimit({
 		windowMs,
 		max,
-        keyGenerator: (req) => {
+		keyGenerator: (req) => {
 			if (keyType === "email" && req.body?.email) {
 				return req.body.email;
 			}
-			return req.ip;
+
+			// Safe IPv6-compatible IP handling
+			return ipKeyGenerator(req);
 		},
 		handler: (req, res, next) =>
 			next(new ApiError(429, message))

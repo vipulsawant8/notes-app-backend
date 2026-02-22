@@ -5,19 +5,19 @@ import Note from '../models/notes.model.js';
 import ApiError from '../utils/ApiError.js';
 
 const fetchNotes = asyncHandler( async (req, res) => {
-	console.log("req.params :", req.params);
 
-	{
+	if (process.env.NODE_ENV === "development") {
 
 		console.log("fetchNotes controller");
 	}
 
 	const user = req.user;
 
-	const page = Math.max(1, Number(req.query.page) || 1);
-	const limit = 12;
+	const page = req.query.page;
+	const limit = 10;
 
-	{
+	if (process.env.NODE_ENV === "development") {
+		console.log("req.params :", req.params);
 		
 		console.log("page :", page);
 		console.log("limit :", limit);
@@ -32,9 +32,6 @@ const fetchNotes = asyncHandler( async (req, res) => {
 	};
 
 	const result = await Note.paginate(filter, options);
-	
-	//  console.log("result: ", result);
-
 	return res.status(200).json({
 		message: "Notes fetched successfully",
 		data: result,
@@ -44,7 +41,7 @@ const fetchNotes = asyncHandler( async (req, res) => {
 
 const newNote = asyncHandler( async (req, res) => {
 
-	{
+	if (process.env.NODE_ENV === "development") {
 
 		console.log("newNote controller");
 		console.log("body :", req.body);
@@ -55,10 +52,8 @@ const newNote = asyncHandler( async (req, res) => {
 	const title = req.body.title?.trim();
 	const content = req.body.content?.trim();
 
-	if (!title) throw new ApiError(400, "Add a title before adding the note.");
-
 	const existingNote = await Note.findOne({ authorID: user._id, title });
-	// if (existingNote) throw new ApiError(400, "A note with this title already exists in your account.");
+	if (existingNote) throw new ApiError(400, "A note with this title already exists in your account.");
 
 	const note = await Note.create({ authorID: user._id, title, content });
 
@@ -68,7 +63,7 @@ const newNote = asyncHandler( async (req, res) => {
 
 const updateNote = asyncHandler( async (req, res) => {
 
-	{
+	if (process.env.NODE_ENV === "development") {
 
 		console.log("updateNote controller");
 		console.log("body :", req.body);
@@ -80,8 +75,6 @@ const updateNote = asyncHandler( async (req, res) => {
 
 	const title = req.body.title?.trim();
 	const content = req.body.content?.trim();
-	
-	if (!Types.ObjectId.isValid(noteID)) throw new ApiError(400, "Unable to update the note. The note could not be identified.");
 
 	const note = await Note.findOneAndUpdate({ authorID: user._id, _id: noteID }, { title, content }, { new: true }).lean();
 
@@ -93,7 +86,7 @@ const updateNote = asyncHandler( async (req, res) => {
 
 const deleteNote = asyncHandler( async (req, res) => {
 
-	{
+	if (process.env.NODE_ENV === "development") {
 
 		console.log("deleteNote controller");
 		console.log('req.params :', req.params);
@@ -101,8 +94,6 @@ const deleteNote = asyncHandler( async (req, res) => {
 
 	const user = req.user;
 	const noteID = req.params.id;
-	
-	if (!Types.ObjectId.isValid(noteID)) throw new ApiError(400, "Unable to delete the note. The note could not be identified.");
 	
 	const note = await Note.findOneAndDelete({ _id: noteID, authorID: user._id }).lean();
 	if (!note) throw new ApiError(404, "This note no longer exists or you don't have permission to delete it.");
@@ -114,7 +105,7 @@ const deleteNote = asyncHandler( async (req, res) => {
 
 const updatePin = asyncHandler( async (req, res) => {
 
-	{
+	if (process.env.NODE_ENV === "development") {
 
 		console.log("updatePin controller");
 		console.log("body :", req.body);
@@ -125,8 +116,6 @@ const updatePin = asyncHandler( async (req, res) => {
 	const noteID = req.params.id;
 	
 	const pin = req.body.status;
-
-	if (!Types.ObjectId.isValid(noteID)) throw new ApiError(400, "Unable to pin/unpin the note. The note could not be identified.");
 
 	const pinCount = await Note.countDocuments({ authorID: user._id, pinned: true });
 

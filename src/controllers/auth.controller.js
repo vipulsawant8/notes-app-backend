@@ -168,8 +168,6 @@ const loginUser = asyncHandler( async (req, res) => {
 	const password = req.body.password;
 	const deviceId = req.body.deviceId;
 
-	if (!identity || !password || !deviceId) throw new ApiError(400, "All Fields are required");
-
 	const user = await User.findOne({ email: identity }).select("-refreshToken");
 	if (process.env.NODE_ENV === "development") console.log('user :', user);
 
@@ -182,7 +180,7 @@ const loginUser = asyncHandler( async (req, res) => {
 
 	if (!isPasswordVerified) throw new ApiError(401, "Invalid-credentials");
 
-	const { accessToken, refreshToken } = await generateAccessRefreshToken({ userId: user._id, deviceId, userAgent: req.get('User-Agent') || '', ipAddress: req.ip });
+	const { accessToken, refreshToken } = await generateAccessRefreshToken({ userId: user._id, deviceId, userAgent: req.get('User-Agent') || '', ipAddress: req.ip || req.socket?.remoteAddress || '' });
 
 	const response = { message: "Logged in successfully.", data: user, success: true };
 	return res.status(200)
@@ -285,7 +283,7 @@ const refreshAccessToken = asyncHandler( async (req, res) => {
 
 	if (!user) throw new ApiError(401, "Unauthorized");
 
-	const { accessToken, refreshToken } = await generateAccessRefreshToken({ userId: user._id, deviceId: decodedToken.deviceId, userAgent: req.get('User-Agent') || '', ipAddress: req.ip });
+	const { accessToken, refreshToken } = await generateAccessRefreshToken({ userId: user._id, deviceId: decodedToken.deviceId, userAgent: req.get('User-Agent') || '', ipAddress: req.ip || req.socket?.remoteAddress || '' });
 
 	return res.status(200)
 		.cookie("accessToken", accessToken, setCookieOptions("accessToken"))
