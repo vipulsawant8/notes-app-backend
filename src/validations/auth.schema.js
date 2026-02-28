@@ -1,67 +1,77 @@
-import z from "zod";
-import { Types } from "mongoose";
+import { z } from "zod";
+import ERRORS from "../constants/errors.js";
 
-/* -------------------------------------------------- */
-/* Helpers */
-/* -------------------------------------------------- */
+/* ---------------- COMMON HELPERS ---------------- */
 
-export const objectIdParamSchema = z.object({
-	id: z.string().refine(
-		(val) => Types.ObjectId.isValid(val),
-		{ message: "Invalid ID" }
-	)
-});
+const emailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .email({ message: ERRORS.BAD_REQUEST });
 
-/* -------------------------------------------------- */
-/* Register */
-/* -------------------------------------------------- */
+const passwordSchema = z
+  .string()
+  .min(6, { message: ERRORS.PASSWORD_TOO_SHORT });
 
-export const createAccountSchema = z.object({
-	name: z.string().trim().min(1, "Name is required"),
-	email: z.email("Invalid email"),
-	password: z.string().min(6, "Password must be at least 6 characters")
-});
+const tokenSchema = z
+  .string()
+  .min(1, { message: ERRORS.BAD_REQUEST });
 
-/* -------------------------------------------------- */
-/* Verify Email */
-/* -------------------------------------------------- */
+/* ---------------- CREATE ACCOUNT ---------------- */
 
-export const verifyEmailSchema = z.object({
-	token: z.string().trim().min(1, "Token is required")
-});
+export const createAccountSchema = {
+  body: z.object({
+    email: emailSchema,
+    name: z.string().trim().min(1, { message: ERRORS.MISSING_FIELDS }),
+    password: passwordSchema,
+  }).strict(),
+};
 
-/* -------------------------------------------------- */
-/* Login */
-/* -------------------------------------------------- */
 
-export const loginUserSchema = z.object({
-	identity: z.string().trim().min(1, "Identity is required"),
-	password: z.string().trim().min(1, "Password is required"),
-	deviceId: z.uuid("Invalid deviceId")
-});
+/* ---------------- VERIFY EMAIL ---------------- */
 
-/* -------------------------------------------------- */
-/* Change Password (Authenticated) */
-/* -------------------------------------------------- */
+export const verifyEmailSchema = {
+  body: z.object({
+    token: tokenSchema,
+  }).partial()
+};
 
-export const changePasswordSchema = z.object({
-	currentPassword: z.string().min(1, "Current password is required"),
-	newPassword: z.string().min(6, "New password must be at least 6 characters")
-});
 
-/* -------------------------------------------------- */
-/* Forgot Password */
-/* -------------------------------------------------- */
+/* ---------------- LOGIN ---------------- */
 
-export const forgotPasswordSchema = z.object({
-	email: z.email("Invalid email")
-});
+export const loginUserSchema = {
+  body: z.object({
+    identity: emailSchema,
+    password: z.string().min(1, { message: ERRORS.MISSING_FIELDS }),
+    deviceId: z.string().uuid({ message: ERRORS.BAD_REQUEST }),
+  }).strict(),
+};
 
-/* -------------------------------------------------- */
-/* Reset Password */
-/* -------------------------------------------------- */
 
-export const resetPasswordSchema = z.object({
-	token: z.string().trim().min(1, "Reset token is required"),
-	newPassword: z.string().min(6, "Password must be at least 6 characters")
-});
+/* ---------------- CHANGE PASSWORD ---------------- */
+
+export const changePasswordSchema = {
+  body: z.object({
+    currentPassword: z.string().min(1, { message: ERRORS.MISSING_FIELDS }),
+    newPassword: passwordSchema,
+  }).strict(),
+};
+
+
+/* ---------------- FORGOT PASSWORD ---------------- */
+
+export const forgotPasswordSchema = {
+  body: z.object({
+    email: emailSchema,
+  }).strict(),
+};
+
+
+/* ---------------- RESET PASSWORD ---------------- */
+
+export const resetPasswordSchema = {
+  body: z.object({
+    token: tokenSchema,
+    newPassword: passwordSchema,
+  }).partial().strict()
+};

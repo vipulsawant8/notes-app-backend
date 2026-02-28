@@ -1,3 +1,5 @@
+import { ZodError } from "zod";
+
 const getCollectionName = (err) => {
 	if (err.errorResponse?.collection) return err.errorResponse.collection;
 
@@ -99,7 +101,20 @@ const errorHandler = (err, req, res, next) => {
 	}
 
 	// -----------------------------------------
-	// 7. Fallback: internal server error
+	// 7. Zod Validation Errors 
+	// -----------------------------------------
+	if (err instanceof ZodError) {
+		const message =
+			err.issues[0]?.message || ERRORS.VALIDATION_FAILED;
+
+		return res.status(400).json({
+			success: false,
+			message,
+		});
+	}
+
+	// -----------------------------------------
+	// 8. Fallback: internal server error
 	// -----------------------------------------
 	return res.status(500).json({
 		success: false,

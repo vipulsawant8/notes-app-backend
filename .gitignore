@@ -8,4 +8,3 @@ logs/
 
 node_modules/
 app_password.txt
-seeds.json

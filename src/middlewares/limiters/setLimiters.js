@@ -1,26 +1,51 @@
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import ApiError from "../../utils/ApiError.js";
 
-const createLimiter = (windowMs, max, message, keyType = "ip") =>
+export const createLimiter = (
+	windowMs,
+	max,
+	message,
+	keyType = "ip",          // "ip" | "email" | "user"
+	countOnlySuccess = false // if true → only count responses < 400
+) =>
 	rateLimit({
 		windowMs,
 		max,
+
 		keyGenerator: (req) => {
-			if (keyType === "email" && req.body?.email) {
-				return req.body.email;
+			/* ---- Per Authenticated User ---- */
+			if (keyType === "user" && req.user?._id) {
+				return `user:${req.user._id.toString()}`;
 			}
 
-			// Safe IPv6-compatible IP handling
-			return ipKeyGenerator(req);
+			/* ---- Per Email (Login / Register) ---- */
+			if (keyType === "email" && req.body?.email) {
+				return `email:${req.body.email.trim().toLowerCase()}`;
+			}
+
+			/* ---- Default: IP ---- */
+			return `ip:${ipKeyGenerator(req.ip)}`;
 		},
-		handler: (req, res, next) =>
-			next(new ApiError(429, message))
+
+		/* ---- Only Count Successful Requests (Optional) ---- */
+		skip: (req, res) => {
+			if (!countOnlySuccess) return false;
+			return res.statusCode >= 400;
+		},
+
+		handler: (req, res, next) => {
+			next(new ApiError(429, message));
+		},
+
+		standardHeaders: true,
+		legacyHeaders: false,
 	});
 
 export const createdUserLimiter = createLimiter(
 	15 * 60 * 1000,
 	5,
-	"Too many registration attempts. Try again later."
+	"Too many registration attempts. Try again later.",
+	"email"
 );
 
 export const verifyEmailLimiter = createLimiter(
@@ -37,20 +62,65 @@ export const loginLimiter = createLimiter(
 );
 
 export const forgotPasswordLimiter = createLimiter(
-	15 * 60 * 1000,
+	60 * 60 * 1000,
 	5,
 	"Too many reset requests. Please try again later.",
     "email"
 );
 
+export const resetPasswordLimiter = createLimiter(
+	60 * 60 * 1000,
+	10,
+	"Too many reset requests. Please try again later.",
+);
+
 export const changePasswordLimiter = createLimiter(
 	15 * 60 * 1000,
 	5,
-	"Too many password change attempts."
+	"Too many password change attempts.",
+	"user"
 );
 
 export const refreshTokenLimiter = createLimiter(
 	15 * 60 * 1000,
 	20,
 	"Too many token refresh attempts. Please try again later."
+);
+
+export const createNoteLimiter = createLimiter(
+	60 * 60 * 1000,
+	3,
+	"Max 3 Note creation allowed per hour",
+	"user",
+	true
+);
+
+export const updateNoteLimiter = createLimiter(
+	60 * 60 * 1000,
+	3,
+	"Max 3 Note updation allowed per hour",
+	"user",
+	true
+);
+
+export const deleteNoteLimiter = createLimiter(
+	60 * 60 * 1000,
+	3,
+	"Max 3 Note deletion allowed per hour",
+	"user",
+	true
+);
+
+export const pinUnpinNoteLimiter = createLimiter(
+	60 * 60 * 1000,
+	10,
+	"Max 10 times to pin/unpin a Note per hour"
+);
+
+// Anti-spam
+export const burstLimiter = createLimiter(
+	5 * 60 * 1000,
+	20,
+	"Too many requests. Slow down.",
+	"user"
 );

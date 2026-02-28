@@ -1,20 +1,20 @@
 import { Router } from "express";
-import verifyLogin from "../middlewares/auth/verifyLogin.js";
+
 import { validate } from "../middlewares/validate/validate.middleware.js";
-import { paginationQuerySchema, addNoteSchema, updateNoteSchema } from "../validations/note.schema.js";
-import { objectIdParamSchema } from "../validations/auth.schema.js";
+import { createNoteLimiter, updateNoteLimiter, deleteNoteLimiter, pinUnpinNoteLimiter, burstLimiter } from "../middlewares/limiters/setLimiters.js";
+import verifyLogin from "../middlewares/auth/verifyLogin.js";
+
+import { paginationQuerySchema, addNoteSchema, updateNoteSchema, deleteNoteSchema, pinUnpinNoteSchema } from "../validations/note.schema.js";
 import { fetchNotes, newNote, updateNote, deleteNote, updatePin } from "../controllers/note.controller.js";
 
 const router = Router();
 
-router.use(verifyLogin);
+router.get('/', verifyLogin, validate(paginationQuerySchema), fetchNotes);
+router.post('/', burstLimiter, createNoteLimiter, verifyLogin, validate(addNoteSchema), newNote);
 
-router.get('/', validate({ params: paginationQuerySchema }), fetchNotes);
-router.post('/', validate({ body: addNoteSchema }), newNote);
+router.patch('/:id', burstLimiter, updateNoteLimiter, verifyLogin, validate(updateNoteSchema), updateNote);
+router.delete('/:id', burstLimiter, deleteNoteLimiter, verifyLogin, validate(deleteNoteSchema), deleteNote);
 
-router.patch('/:id', validate({ params: objectIdParamSchema, body: updateNoteSchema }), updateNote);
-router.delete('/:id', validate({ params: objectIdParamSchema }), deleteNote);
-
-router.patch('/:id/update-pin', validate({ params: objectIdParamSchema }), updatePin);
+router.patch('/:id/update-pin', burstLimiter, pinUnpinNoteLimiter, verifyLogin, validate(pinUnpinNoteSchema), updatePin);
 
 export default router;

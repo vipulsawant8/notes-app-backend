@@ -1,20 +1,24 @@
 import { Router } from "express";
 
-import { createdUserLimiter, verifyEmailLimiter, loginLimiter, changePasswordLimiter, forgotPasswordLimiter, refreshTokenLimiter  } from "../middlewares/limiters/setLimiters.js";
+import { createdUserLimiter, verifyEmailLimiter, loginLimiter, changePasswordLimiter, forgotPasswordLimiter, refreshTokenLimiter, resetPasswordLimiter  } from "../middlewares/limiters/setLimiters.js";
 import { validate } from "../middlewares/validate/validate.middleware.js";
-import { createAccountSchema, verifyEmailSchema, loginUserSchema } from "../validations/auth.schema.js";
-import { getMe, loginUser, logoutUser, createAccount, verifyEmail, refreshAccessToken } from "../controllers/auth.controller.js";
+import { createAccountSchema, verifyEmailSchema, loginUserSchema, changePasswordSchema, forgotPasswordSchema, resetPasswordSchema } from "../validations/auth.schema.js";
+import { getMe, loginUser, logoutUser, createAccount, verifyEmail, refreshAccessToken, changePassword, forgotPassword, resetPassword } from "../controllers/auth.controller.js";
 import verifyLogin from "../middlewares/auth/verifyLogin.js";
 
 const router = Router();
 
-router.post('/create-account', createdUserLimiter, validate({ body: createAccountSchema }), createAccount);
-router.post('/verify-email', verifyEmailLimiter, validate({ body: verifyEmailSchema }), verifyEmail);
+router.post('/create-account', createdUserLimiter, validate(createAccountSchema), createAccount);
+router.post('/verify-email', verifyEmailLimiter, validate(verifyEmailSchema), verifyEmail);
 
-router.post('/login', loginLimiter, validate({ body: loginUserSchema }), loginUser);
+router.post('/login', loginLimiter, validate(loginUserSchema), loginUser);
 router.post('/logout', logoutUser);
 
 router.get('/me', verifyLogin, getMe);
 router.post('/refresh-token', refreshTokenLimiter,  refreshAccessToken);
+
+router.post('/change-password', changePasswordLimiter, verifyLogin, validate(changePasswordSchema), changePassword);
+router.post('/forgot-password', forgotPasswordLimiter, validate(forgotPasswordSchema), forgotPassword);
+router.post('/reset-password', resetPasswordLimiter, validate(resetPasswordSchema), resetPassword);
 
 export default router;

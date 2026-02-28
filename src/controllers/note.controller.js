@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 
 import Note from '../models/notes.model.js';
 import ApiError from '../utils/ApiError.js';
+import ERRORS from '../constants/errors.js';
 
 const fetchNotes = asyncHandler( async (req, res) => {
 
@@ -53,7 +54,7 @@ const newNote = asyncHandler( async (req, res) => {
 	const content = req.body.content?.trim();
 
 	const existingNote = await Note.findOne({ authorID: user._id, title });
-	if (existingNote) throw new ApiError(400, "A note with this title already exists in your account.");
+	if (existingNote) throw new ApiError(400, ERRORS.NOTE_ALREADY_EXISTS);
 
 	const note = await Note.create({ authorID: user._id, title, content });
 
@@ -78,7 +79,7 @@ const updateNote = asyncHandler( async (req, res) => {
 
 	const note = await Note.findOneAndUpdate({ authorID: user._id, _id: noteID }, { title, content }, { new: true }).lean();
 
-	if (!note) throw new ApiError(404, "This note no longer exists or you don't have permission to update it.");
+	if (!note) throw new ApiError(404, ERRORS.NOTE_NOT_FOUND);
 
 	const response = { statusCode: 200, message: `"${note.title}" was updated`, data: note };
 	return res.status(response.statusCode).json(response);
@@ -96,7 +97,7 @@ const deleteNote = asyncHandler( async (req, res) => {
 	const noteID = req.params.id;
 	
 	const note = await Note.findOneAndDelete({ _id: noteID, authorID: user._id }).lean();
-	if (!note) throw new ApiError(404, "This note no longer exists or you don't have permission to delete it.");
+	if (!note) throw new ApiError(404, ERRORS.NOTE_NOT_FOUND);
 
 	const response = { statusCode: 200, message: `"${note.title}" was deleted`, data: note }
 
@@ -119,11 +120,11 @@ const updatePin = asyncHandler( async (req, res) => {
 
 	const pinCount = await Note.countDocuments({ authorID: user._id, pinned: true });
 
-	if (pin && pinCount >=3) throw new ApiError(400, "You can pin up to 3 documents only.");
+	if (pin && pinCount >=3) throw new ApiError(400, ERRORS.NOTE_PIN_LIMIT);
 
 	const note = await Note.findOneAndUpdate({ authorID: user._id, _id: noteID }, { pinned: pin }, { new: true }).lean();
 
-	if (!note) throw new ApiError(404, "This note no longer exists or you don't have permission to pin/unpin it.");
+	if (!note) throw new ApiError(404, ERRORS.NOTE_NOT_FOUND);
 
 	const response = { statusCode: 200, message: `"${note.title}" was ${ pin ? "Pinned" : "Unpinned"}`, data: note };
 	return res.status(response.statusCode).json(response);

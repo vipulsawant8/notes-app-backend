@@ -1,5 +1,3 @@
-import ApiError from "../../utils/ApiError.js";
-
 export const validate = (schemas) => (req, res, next) => {
 	try {
 		if (schemas.body) {
@@ -16,9 +14,6 @@ export const validate = (schemas) => (req, res, next) => {
 
 		next();
 	} catch (error) {
-		const message =
-			error?.issues?.[0]?.message || "Validation error";
-
-		next(new ApiError(400, message));
+		next(error); // Let global error middleware handle ZodError
 	}
 };
