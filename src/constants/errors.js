@@ -20,6 +20,7 @@ const ERRORS = {
 	NOTE_DATA_REQUIRED: "Note title required",
 	NOTE_ALREADY_EXISTS: "You already have a Note with this title in your account",
 	NOTE_NOT_IDENTIFIED: "Unable to edit or delete note. The note could not be identified.",
+	NOTE_PIN_LIMIT: "You can pin up to 3 documents only.",
 
 	// PASSWORD
 	CURRENT_PASSWORD_INCORRECT: "Current password is incorrect.",
