@@ -44,6 +44,6 @@ export const pinUnpinNoteSchema = {
     id: objectIdSchema,
   }),
     body: z.object({
-        status: z.boolean("Bad Request")
+        status: z.boolean(ERRORS.BAD_REQUEST)
     })
 }
