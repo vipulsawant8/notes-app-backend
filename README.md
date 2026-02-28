@@ -1,249 +1,105 @@
-# Notes App — Backend API (Node.js + Express)
+# Notes App Backend
 
-![License](https://img.shields.io/github/license/vipulsawant8/notes-app-backend)
-![Node](https://img.shields.io/badge/node-%3E%3D18.x-brightgreen)
-![Express](https://img.shields.io/badge/express-5.x-black)
-![MongoDB](https://img.shields.io/badge/mongodb-database-green)
-![Render](https://img.shields.io/badge/render-deployed-success?logo=render&logoColor=white)
+Secure RESTful backend for a Notes Management Application built with
+Express, MongoDB, and JWT authentication.
 
-**Live API (Render):** https://notes-app-backend-prbr.onrender.com
+Implements cookie-based authentication with refresh token rotation,
+email verification, rate limiting, and input validation.
 
----
 
-Backend service for the Notes application, built with Node.js, Express, and MongoDB.
 
-This API provides authentication, authorization, and notes persistence using a cookie-based session model with access and refresh token rotation.  
-Designed to integrate with a separately deployed React + Redux frontend.
+# Core Features
 
-## Architecture Overview
+-   Versioned REST API (/api/v1)
+-   Cookie-based JWT authentication
+-   Refresh token rotation (hashed + DB persisted)
+-   Email verification via token
+-   Password reset flow
+-   Route-level rate limiting
+-   Zod request validation
+-   MongoDB TTL cleanup for tokens
+-   Centralized error handling
 
-The backend follows a modular Express architecture with clear separation of concerns:
 
-- Routing → endpoint definitions
-- Controllers → request handling and response shaping
-- Middleware → authentication and centralized error handling
-- Models → data schemas and business rules
-- Utilities → shared helpers and abstractions
 
-All endpoints are versioned under `/api/v1`.  
-All security-sensitive logic (tokens, cookies, session validation) is handled exclusively on the server.
+# Project Structure
 
-## Authentication & Session Strategy
+    src/
+    ├── app.js
+    ├── loadEnv.js
+    ├── server.js
+    ├── constants/
+    ├── controllers/
+    ├── db/
+    ├── middlewares/
+    ├── models/
+    ├── routes/
+    ├── utils/
+    └── validations/
 
-This backend implements **cookie-based authentication with refresh token rotation**.
 
-### Email Verification (OTP-Based Registration)
 
-New user registration follows a multi-step email verification flow before account creation.
+# Authentication System
 
-#### Registration Flow
+-   Access tokens (short-lived)
+-   Refresh tokens (long-lived, hashed in DB)
+-   Device-scoped sessions
+-   HTTP-only cookies
+-   Refresh token rotation on every use
+-   Logout invalidates refresh token
 
-1. User submits email → POST /auth/send-otp
-2. Server:
-	- Generates 6-digit OTP
-	- Stores OTP with expiry
-	- Sends OTP via email
-	- Enforces resend cooldown (60 seconds)
-3. User submits OTP → POST /auth/verify-otp
-	- OTP validated against:
-		- Correct value
-		- Expiry window
-		- Attempt limit (max 5 attempts)
-		- On success → OTP marked as verified
-4. User completes registration → POST /auth/register
-	- Requires verified OTP
-	- Password is hashed
-	- Account is created
-	- OTP record is deleted
 
-### OTP Security Rules
 
-- OTP expires in 10 minutes
-- Maximum 5 verification attempts
-- Resend OTP cooldown: 60 seconds
-- OTP verification required before account creation
-- OTP records are removed after successful registration
+# Notes System
 
-### Key characteristics
+-   Authenticated users can:
+    -   Create notes
+    -   Update notes
+    -   Delete notes
+    -   Fetch notes
+-   Ownership enforced via userID checks
+-   Validation enforced via Zod schemas
 
-- Access and refresh tokens are issued by the server
-- Tokens are stored in **HTTP-only cookies**
-- Tokens are never exposed to frontend JavaScript
-- Refresh tokens are **persisted in the database**
-- Refresh tokens are **rotated on every successful refresh**
-- Sessions are tracked per device using a client-generated `deviceId`
 
-### Session Lifecycle
 
-1. New user completes OTP-based email verification and registration
-2.  User logs in with credentials and a `deviceId`
-3. Server issues:
-	- Short-lived access token
-	- Long-lived refresh token
-4. Tokens are set as HTTP-only cookies
-5. Protected routes validate the access token
-6. When access token expires:
-	- Client calls `/auth/refresh-token`
-	- Server validates and rotates refresh token
-	- New cookies are issued
-7. On logout:
-	- Refresh token for that device is removed from the database
-	- Cookies are cleared
+# Security Features
 
-If refresh validation fails, **the session is invalidated** and the user must re-authenticate.
+-   HTTP-only cookies
+-   Secure flag enabled in production
+-   Rate limiting per sensitive route
+-   Hashed refresh tokens
+-   Centralized error handling
+-   Input validation middleware
 
-## API Design Principles
 
-- Stateless access tokens
-- Refresh token rotation to prevent replay attacks
-- Centralized error handling
-- No token storage on the client
-- Minimal surface area for authentication logic
 
-## Project Structure
+# Environment Variables
 
-```bash
-src
-├── app.js
-├── constants
-│   └── cookieOptions.js
-├── controllers
-│   ├── auth.controller.js
-│   └── note.controller.js
-├── db
-│   └── connectDB.js
-├── loadEnv.js
-├── middlewares
-│   ├── auth
-│   │   └── verifyLogin.js
-│   └── error
-│       └── errorHandler.middleware.js
-├── models
-│   ├── notes.model.js
-│   ├── otp.model.js
-│	└── user.model.js
-├── routes
-│   ├── auth.routes.js
-│   └── note.routes.js
-├── server.js
-└── utils
-	├── ApiError.js
-	└── sendEmail.js
+Required:
+
+```
+PORT=
+DB_CONNECT_STRING=
+ACCESS_TOKEN_SECRET=
+REFRESH_TOKEN_SECRET=
+ACCESS_TOKEN_EXPIRY=
+REFRESH_TOKEN_EXPIRY=
+CORS_ORIGIN=
+CLIENT_URL=
+EMAIL_USER=
+BREVO_API_KEY=
 ```
 
-## Folder responsibilities
 
-- controllers/ – business logic and response formatting
-- routes/ – endpoint definitions and middleware wiring
-- middlewares/ – authentication guards and error handling
-- models/ – MongoDB schemas and data rules
-- constants/ – shared configuration (cookie options)
-- utils/ – reusable helpers and abstractions
 
-## Authentication Middleware
+# Local Development
 
-Protected routes use a dedicated authentication middleware:
+npm install Create .env file npm run dev
 
-- Reads access token from HTTP-only cookies
-- Verifies token signature and expiration
-- Fetches user from database
-- Attaches user to req.user
+Server runs on configured PORT.
 
-Refresh logic is intentionally not handled in middleware and remains centralized in the refresh endpoint.
 
-## Error Handling
 
-All errors are handled by a single centralized error handler.
+# License
 
-Handled cases include:
-
-- MongoDB duplicate key errors
-- Mongoose validation errors
-- Invalid ObjectId errors
-- JWT verification errors
-- Malformed JSON payloads
-- Custom ApiError instances
-
-Error responses are sanitized in production to avoid leaking internal details.
-
-## Notes API Behavior
-
-- Notes are user-scoped (ownership enforced server-side)
-- Supports create, read, update, delete
-- Pagination supported
-- Notes are sorted by:
-  1. Pinned notes first
-  2. Most recently updated
-
-All validation and authorization checks are enforced by the backend.
-
-## Environment Configuration
-
-Environment variables are managed using **dotenv-flow**, allowing environment-specific and local overrides.
-
-Only an example file is committed:
-
-```bash
-.env.example
-```
-
-Required environment variables include:
-
-- PORT
-- NODE_ENV
-- MONGO_URI
-- ACCESS_TOKEN_SECRET
-- REFRESH_TOKEN_SECRET
-- CORS_ORIGIN
-- ACCESS_TOKEN_EXPIRY
-- REFRESH_TOKEN_EXPIRY
-
-All secrets are managed server-side.  
-JWT expiration is configured via environment variables, while cookie lifetimes are defined in code to ensure consistent browser behavior.
-
-## Frontend Integration
-
-This backend is consumed by a separately deployed frontend.
-
-- Frontend Repository: https://github.com/vipulsawant8/notes-app-frontend
-- Frontend Stack: React, Redux Toolkit, Axios
-- Auth Integration: Cookie-based authentication with refresh token rotation
-
-The frontend does not manage tokens and relies entirely on server-side session handling.
-
-## Security Considerations
-
-- Tokens stored only in HTTP-only cookies
-- Refresh tokens rotated on every use
-- Logout invalidates refresh token in database
-- No sensitive data returned in API responses
-- Error messages sanitized in production
-- Email ownership verified via OTP before account creation
-- OTP attempt limit to prevent brute-force attacks
-- Resend cooldown to prevent email spam
-
-This backend is intended for portfolio and demo usage, not high-risk production systems.
-
-## Getting Started (Local Development)
-
-1. Clone the repository
-2. Install dependencies
-```bash
-npm install
-```
-3. Create an environment file
-```bash
-cp .env.example .env.development
-```
-4. Start the server
-```bash
-npm run dev
-```
-The API will be available at:
-```bash
-http://localhost:<PORT>/api/v1
-```
-
-## License
-
-This project is licensed under the MIT License.
+MIT License
