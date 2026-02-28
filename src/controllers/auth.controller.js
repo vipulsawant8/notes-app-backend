@@ -194,7 +194,7 @@ const logoutUser = asyncHandler( async (req, res) => {
 
 	if (process.env.NODE_ENV === "development") {
 
-		console.log("logotUser controller");
+		console.log("logoutUser controller");
 		console.log("req.cookies :", req.cookies);
 	}
 
