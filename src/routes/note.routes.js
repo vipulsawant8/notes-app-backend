@@ -9,12 +9,12 @@ import { fetchNotes, newNote, updateNote, deleteNote, updatePin } from "../contr
 
 const router = Router();
 
-router.get('/', verifyLogin, validate(paginationQuerySchema), fetchNotes);
-router.post('/', burstLimiter, createNoteLimiter, verifyLogin, validate(addNoteSchema), newNote);
+router.get('/', verifyLogin, burstLimiter, validate(paginationQuerySchema), fetchNotes);
+router.post('/', verifyLogin, burstLimiter, createNoteLimiter, validate(addNoteSchema), newNote);
 
-router.patch('/:id', burstLimiter, updateNoteLimiter, verifyLogin, validate(updateNoteSchema), updateNote);
-router.delete('/:id', burstLimiter, deleteNoteLimiter, verifyLogin, validate(deleteNoteSchema), deleteNote);
+router.patch('/:id', verifyLogin, burstLimiter, updateNoteLimiter, validate(updateNoteSchema), updateNote);
+router.delete('/:id', verifyLogin, burstLimiter, deleteNoteLimiter, validate(deleteNoteSchema), deleteNote);
 
-router.patch('/:id/update-pin', burstLimiter, pinUnpinNoteLimiter, verifyLogin, validate(pinUnpinNoteSchema), updatePin);
+router.patch('/:id/update-pin', verifyLogin, burstLimiter, pinUnpinNoteLimiter, validate(pinUnpinNoteSchema), updatePin);
 
 export default router;
