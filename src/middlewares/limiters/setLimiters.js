@@ -28,10 +28,7 @@ export const createLimiter = (
 		},
 
 		/* ---- Only Count Successful Requests (Optional) ---- */
-		skip: (req, res) => {
-			if (!countOnlySuccess) return false;
-			return res.statusCode >= 400;
-		},
+		skipFailedRequests: countOnlySuccess,
 
 		handler: (req, res, next) => {
 			next(new ApiError(429, message));

@@ -1,5 +1,4 @@
 import asyncHandler from 'express-async-handler';
-import { Types } from 'mongoose';
 
 import Note from '../models/notes.model.js';
 import ApiError from '../utils/ApiError.js';
