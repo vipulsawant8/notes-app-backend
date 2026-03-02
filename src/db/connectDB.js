@@ -1,7 +1,7 @@
 import { connect } from "mongoose";
 import User from "../models/user.model.js";
 import Note from "../models/notes.model.js";
-// import notes from "../seeds.json" with { type: "json" };
+import logger from "../utils/logger.js";
 
 const connectDB = async () => {
 
@@ -15,20 +15,28 @@ const connectDB = async () => {
 
 		const conn = await connect(DB_PATH);
 
-		if (process.env.NODE_ENV !== "production") {
-	
-			console.log("MongoDB connected");
-			console.log('host :', conn.connection.host);
-			console.log("dbName :", conn.connection.name);
-			console.log("collections :", Object.keys(conn.connection.collections));
-		}
+		logger.info(
+		{
+			host: conn.connection.host,
+			dbName: conn.connection.name
+		},
+		"MongoDB connected successfully"
+		);
+		logger.debug(
+        {
+          collections: Object.keys(conn.connection.collections)
+        },
+        "MongoDB collections loaded"
+      );
 
 		await User.syncIndexes();
 		await Note.syncIndexes();
+
+    logger.info("Database indexes synced successfully");
 	} catch (error) {
 		
-		console.log("MongoDB Connection Error :", error);
-		process.exit(1);
+		logger.fatal({ err: error }, "MongoDB connection failed");
+    	throw error;
 	}
 };
 

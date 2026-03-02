@@ -1,4 +1,5 @@
 import { ZodError } from "zod";
+import logger from "../../utils/logger.js";
 
 const getCollectionName = (err) => {
 	if (err.errorResponse?.collection) return err.errorResponse.collection;
@@ -16,8 +17,8 @@ const errorHandler = (err, req, res, next) => {
 
 	// Debug logging
 	if (!isProd) {
-		console.error("🔥 ERROR:", err);
-		if (err.stack) console.error(err.stack);
+		logger.error({ err }, "Error is :");
+		if (err.stack) logger.error({stack: err.stack});
 	}
 
 	// -----------------------------------------

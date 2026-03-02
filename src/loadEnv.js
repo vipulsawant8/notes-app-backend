@@ -1,4 +1,5 @@
 import dotenvFlow from "dotenv-flow";
+import logger from "./utils/logger.js";
 
 dotenvFlow.config({
 	node_env: process.env.NODE_ENV || "development",
@@ -6,4 +7,7 @@ dotenvFlow.config({
 	silent: false
 });
 
-console.log(`Environment loaded → NODE_ENV=${process.env.NODE_ENV}`);
+logger.info(
+  { nodeEnv: process.env.NODE_ENV },
+  "Environment configuration loaded"
+);

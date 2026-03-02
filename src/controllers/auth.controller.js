@@ -1,6 +1,7 @@
 import asyncHandler from "express-async-handler";
 import User from "../models/user.model.js";
 import ApiError from "../utils/ApiError.js";
+import logger from "../utils/logger.js";
 
 import { setCookieOptions, clearCookieOptions } from "../constants/cookieOptions.js";
 
@@ -15,6 +16,11 @@ const VERIFICATION_TOKEN_EXPIRY = 15 * 60 * 1000;
 const generateAccessRefreshToken = async ({ userId, deviceId, userAgent, ipAddress }) => {
 	const user = await User.findById(userId);
 	if (!user) throw new ApiError(404, "User Not Found");
+
+	logger.debug(
+		{ userId, deviceId },
+		"Generating access and refresh tokens"
+	);
 
 	const accessToken = await user.generateAccessToken(deviceId);
 	const refreshToken = await user.generateRefreshToken(deviceId);
@@ -47,6 +53,11 @@ const generateAccessRefreshToken = async ({ userId, deviceId, userAgent, ipAddre
 		}
 	);
 
+	logger.info(
+		{ userId, deviceId },
+		"Refresh token stored successfully"
+	);
+
 	const tokens = { accessToken, refreshToken };
 	return tokens;
 };
@@ -62,6 +73,7 @@ const createAccount = asyncHandler(async (req, res) => {
 
 	const { email, name, password } = req.body;
 
+	logger.info({ email }, "Account creation attempt");
 	if (!email || !name || !password)
 		throw new ApiError(400, ERRORS.MISSING_FIELDS);
 
@@ -69,6 +81,7 @@ const createAccount = asyncHandler(async (req, res) => {
 
 	// Case 1: User already verified
 	if (existingUser && existingUser.isVerified) {
+		logger.warn({ email }, "Account creation failed: already verified");
 		throw new ApiError(400, "Account already exists. Please login.");
 	}
 
@@ -110,7 +123,7 @@ const createAccount = asyncHandler(async (req, res) => {
 		subject: "Verify Your Email",
 		text: `Click the link to verify your email: ${verificationLink}`
 	});
-
+	logger.info({ email }, "Verification email sent");
 	return res.status(201).json({
 		success: true,
 		message: "Please verify your email to activate your account."
@@ -118,6 +131,7 @@ const createAccount = asyncHandler(async (req, res) => {
 });
 
 const verifyEmail = asyncHandler(async (req, res) => {
+	logger.info("Email verification attempt");
 
 	const token = req.query.token || req.body.token;
 
@@ -134,8 +148,10 @@ const verifyEmail = asyncHandler(async (req, res) => {
 		verificationTokenExpiry: { $gt: Date.now() }
 	});
 
-	if (!user)
+	if (!user){
+		logger.warn("Invalid or expired verification token");
 		throw new ApiError(400, "Invalid or expired token.");
+	}
 
 	if (user.isVerified)
 		return res.status(200).json({
@@ -148,6 +164,7 @@ const verifyEmail = asyncHandler(async (req, res) => {
 	user.verificationTokenExpiry = undefined;
 
 	await user.save();
+	logger.info({ userId: user._id }, "Email verified successfully");
 
 	return res.status(200).json({
 		success: true,
@@ -157,30 +174,40 @@ const verifyEmail = asyncHandler(async (req, res) => {
 
 const loginUser = asyncHandler( async (req, res) => {
 
-	if (process.env.NODE_ENV === "development") {
-
-		console.log("loginUser controller");
-		console.log("req.body :", req.body);
-	}
-
 	const identity = req.body.identity;
 	const password = req.body.password;
 	const deviceId = req.body.deviceId;
+	logger.info(
+		{ email: identity, ip: req.ip },
+		"Login attempt"
+	);
 
 	const user = await User.findOne({ email: identity }).select("-refreshToken");
-	if (process.env.NODE_ENV === "development") console.log('user :', user);
 
-	if (!user) throw new ApiError(401, "Invalid-credentials");
+	if (!user){
+		logger.warn(
+			{ email: identity },
+			"Login failed: user not found"
+		);
+		throw new ApiError(401, "Invalid-credentials");
+	} 
 
 	if (user && !user.isVerified) throw new ApiError(403, "Please verify your email first.");
 
 	const isPasswordVerified = await user.verifyPassword(password);
-	if (process.env.NODE_ENV === "development") console.log('isPasswordVerified :', isPasswordVerified);
 
-	if (!isPasswordVerified) throw new ApiError(401, "Invalid-credentials");
+	if (!isPasswordVerified) {
+		logger.warn(
+			{ email: identity },
+			"Login failed: invalid credentials"
+		);
+		throw new ApiError(401, "Invalid-credentials");}
 
 	const { accessToken, refreshToken } = await generateAccessRefreshToken({ userId: user._id, deviceId, userAgent: req.get('User-Agent') || '', ipAddress: req.ip || req.socket?.remoteAddress || '' });
-
+	logger.info(
+		{ userId: user._id, deviceId },
+		"User logged in successfully"
+	);
 	const response = { message: "Logged in successfully.", data: user, success: true };
 	return res.status(200)
 	.cookie('accessToken', accessToken, setCookieOptions('accessToken'))
@@ -189,16 +216,14 @@ const loginUser = asyncHandler( async (req, res) => {
 } );
 
 const logoutUser = asyncHandler( async (req, res) => {
+	logger.info({ ip: req.ip }, "Logout attempt");
 
 	const incomingToken = req.cookies.refreshToken;
 
-	if (process.env.NODE_ENV === "development") {
-
-		console.log("logoutUser controller");
-		console.log("req.cookies :", req.cookies);
-	}
-
 	if (!incomingToken) {
+		logger.warn(
+			"User logged out no token found"
+		);
 		return clearAndRespond(res);
 	}
 
@@ -210,6 +235,9 @@ const logoutUser = asyncHandler( async (req, res) => {
 		process.env.REFRESH_TOKEN_SECRET
 		);
 	} catch {
+		logger.warn(
+			"User logged out token invalid or expired"
+		);
 		return clearAndRespond(res);
 	}
 
@@ -229,7 +257,10 @@ const logoutUser = asyncHandler( async (req, res) => {
 			}
 		}
 	);
-
+	logger.info(
+	{ userId: decodedToken.id },
+	"User logged out successfully"
+	);
 	return clearAndRespond(res);
 } );
 
@@ -242,14 +273,12 @@ const getMe = asyncHandler( async (req, res) => {
 } );
 
 const refreshAccessToken = asyncHandler( async (req, res) => {
-
-	if (process.env.NODE_ENV === "development") {
-		
-		console.log("refresh controller");
-		console.log("req.cookies :", req.cookies);
-	}
+	logger.info({ ip: req.ip }, "Refresh token attempt");
 	const incomingToken = req.cookies.refreshToken;
-	if (!incomingToken) throw new ApiError(401, "Unauthorized");
+	if (!incomingToken) {
+		logger.warn("Refresh token rejected");
+		throw new ApiError(401, "Unauthorized");
+	}
 
 	let decodedToken;
 	try {
@@ -260,8 +289,6 @@ const refreshAccessToken = asyncHandler( async (req, res) => {
 	} catch {
 		throw new ApiError(401, "Unauthorized");
 	}
-
-	if (process.env.NODE_ENV === "development") console.log("decodedToken :", decodedToken);
 
 	const hashedIncomingToken = crypto
 		.createHash("sha256")
@@ -278,10 +305,12 @@ const refreshAccessToken = asyncHandler( async (req, res) => {
 			}
 		}
 	});
-	if (process.env.NODE_ENV === "development") console.log("user :", user);
 
 	if (!user) throw new ApiError(401, "Unauthorized");
-
+	logger.info(
+		{ userId: user._id },
+		"Session refreshed successfully"
+	);
 	const { accessToken, refreshToken } = await generateAccessRefreshToken({ userId: user._id, deviceId: decodedToken.deviceId, userAgent: req.get('User-Agent') || '', ipAddress: req.ip || req.socket?.remoteAddress || '' });
 
 	return res.status(200)
@@ -294,18 +323,22 @@ const refreshAccessToken = asyncHandler( async (req, res) => {
 } );
 
 const changePassword = asyncHandler( async (req, res) => {
-	
-	if (process.env.NODE_ENV === "development") {
-		
-		console.log("changePassword controller");
-		console.log("req.body:", req.body);
-	}
+	logger.info(
+		{ userId: user._id },
+		"Password change attempt"
+	);
 	const user = req.user;
 
 	const { currentPassword, newPassword } = req.body;
 
 	const checkcurrentPassword = await user.verifyPassword(currentPassword);
-	if (!checkcurrentPassword) throw new ApiError(400, "Current Password is incorrect");
+	if (!checkcurrentPassword) {
+		logger.warn(
+			{ userId: user._id },
+			"Password change failed: incorrect current password"
+		);
+		throw new ApiError(400, "Current Password is incorrect");
+	}
 
 	const checkNewPassword = await user.verifyPassword(newPassword);
 	if (checkNewPassword) throw new ApiError(400, "New Password cannot be same as Current Password");
@@ -319,7 +352,10 @@ const changePassword = asyncHandler( async (req, res) => {
 	);
 	
 	const { accessToken, refreshToken } = await generateAccessRefreshToken({ userId: user._id, deviceId: user.deviceId, userAgent: req.get('User-Agent') || '', ipAddress: req.ip || req.socket?.remoteAddress || '' });
-
+	logger.info(
+		{ userId: user._id },
+		"Password changed successfully"
+	);
 	const response = { message: "Password was Changed Successfully", success: true };
 	return res.status(200)
 	.cookie('accessToken', accessToken, setCookieOptions('accessToken'))
@@ -328,18 +364,11 @@ const changePassword = asyncHandler( async (req, res) => {
 } );
 
 const forgotPassword = asyncHandler( async (req, res) => {
-	
-	if (process.env.NODE_ENV === "development") {
-		
-		console.log("forgetPassword controller");
-		console.log("req.body:", req.body);
-	}
-
 	const { email } = req.body;
+	logger.info({ email }, "Password reset request received");
 	
 	const user = await User.findOne({ email });
 	if (user) {
-		console.log('user :', user);
 		const rawToken = crypto.randomBytes(32).toString("hex");
 		const hashedToken = crypto
 			.createHash("sha256")
@@ -360,17 +389,13 @@ const forgotPassword = asyncHandler( async (req, res) => {
 			text: `Click the link to reset your password: ${verificationLink}`
 		});
 	}
+	logger.info({ email }, "Password reset email sent");
 	const response = { success:true, message: "If an account with that email exists, a reset link has been sent." };
 	return res.json(response);
 } );
 
 const resetPassword = asyncHandler( async (req, res) => {
-	
-	if (process.env.NODE_ENV === "development") {
-		
-		console.log("resetPassword controller");
-		console.log("req.body:", req.body);
-	}
+	logger.info("Password reset attempt");
 
 	const token = req.body.token || req.query.token;
 	const newPassword = req.body.newPassword;
@@ -384,14 +409,20 @@ const resetPassword = asyncHandler( async (req, res) => {
 		passwordResetToken: hashedToken,
 		passwordResetExpiry: { $gt: Date.now() }
 	});
-	if (!user) throw new ApiError(400, "Invalid or expired token.");
+	if (!user) {
+		logger.warn("Invalid password reset token");
+		throw new ApiError(400, "Invalid or expired token.");
+	}
 
 	user.password = newPassword;
 	user.refreshTokens = [];
 	user.passwordResetToken = undefined;
 	user.passwordResetExpiry = undefined;
 	await user.save();
-
+	logger.info(
+		{ userId: user._id },
+		"Password reset successfully"
+	);
 	const response = { message: "Password was Reset", success: true };
 	return res.status(200)
 	.json(response);
