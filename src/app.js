@@ -68,6 +68,14 @@ app.use(`${apiRoute}/api-docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use(`${apiRoute}/auth`, authRoutes);
 app.use(`${apiRoute}/notes`, noteRoutes);
 
+app.get(`${apiRoute}/health`, (req, res) => {
+  res.status(200).json({
+    status: "OK",
+    uptime: process.uptime(),
+    timestamp: Date.now()
+  });
+});
+
 app.use((req, res) => {
 	logger.warn(
 		{ method: req.method, url: req.originalUrl },
