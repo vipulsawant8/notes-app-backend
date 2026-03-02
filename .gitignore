@@ -1,7 +1,5 @@
-.env.*.local
-.env.production
-.env.devlopment
-.env.local
+.env
+.env.*
 
 logs/
 *.log

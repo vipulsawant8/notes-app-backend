@@ -8,6 +8,9 @@ import noteRoutes from "./routes/note.routes.js";
 
 import errorHandler from './middlewares/error/errorHandler.middleware.js';
 
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from './config/swagger.js';
+
 const app = e();
 
 app.disable('x-powered-by');
@@ -61,6 +64,7 @@ app.use((req, res, next) => {
 
 const apiRoute = '/api/v1';
 
+app.use(`${apiRoute}/api-docs`, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use(`${apiRoute}/auth`, authRoutes);
 app.use(`${apiRoute}/notes`, noteRoutes);
 
