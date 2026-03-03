@@ -8,7 +8,8 @@
     "start": "cross-env NODE_ENV=production node src/server.js",
     "dev": "cross-env NODE_ENV=development nodemon src/server.js",
     "lint": "eslint .",
-    "build": "echo \"No build step for backend\""
+    "build": "echo \"No build step for backend\"",
+    "start:docker": "node src/server.js"
   },
   "author": "",
   "license": "ISC",

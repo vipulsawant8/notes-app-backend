@@ -1,4 +1,5 @@
-.env
+!.env
+!.env.example
 .env.*
 
 logs/
@@ -6,3 +7,4 @@ logs/
 
 node_modules/
 app_password.txt
+docker.txt

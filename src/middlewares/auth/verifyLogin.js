@@ -2,6 +2,7 @@ import asyncHandler from "express-async-handler";
 import jwt from "jsonwebtoken";
 import ApiError from "../../utils/ApiError.js";
 import User from "../../models/user.model.js";
+import logger from "../../utils/logger.js";
 
 const verifyLogin = asyncHandler( async (req, res, next) => {
 	
@@ -20,9 +21,10 @@ const verifyLogin = asyncHandler( async (req, res, next) => {
 
 	if (!decodedToken.id) throw new ApiError(401, "Unauthorized");
 
+	logger.debug({ decodedToken }, "User :");
 	const user = await User.findById(decodedToken.id);
 
-	if (!user) throw new ApiError(404, "User not found");
+	if (!user) throw new ApiError(401, "Unauthorized");
 
 	req.user = user;
 	req.user.deviceId = decodedToken.deviceId;

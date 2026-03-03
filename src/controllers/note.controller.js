@@ -120,12 +120,12 @@ const updatePin = asyncHandler( async (req, res) => {
 
 	const user = req.user;
 	const noteID = req.params.id;
+	
+	const pin = req.body.status;
 	logger.info(
 		{ userId: user._id, noteID, pin },
 		"Update pin status attempt"
 	);
-	
-	const pin = req.body.status;
 
 	const pinCount = await Note.countDocuments({ authorID: user._id, pinned: true });
 
