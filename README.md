@@ -1,104 +1,156 @@
 # Notes App Backend
 
-Secure RESTful backend for a Notes Management Application built with
-Express, MongoDB, and JWT authentication.
-
-Implements cookie-based authentication with refresh token rotation,
-email verification, rate limiting, and input validation.
-
-
+Secure RESTful backend for a Notes Management application built with **Node.js, Express, and MongoDB**.
+The system implements **cookie-based JWT authentication with refresh token rotation**, email verification, password reset functionality, rate limiting, and structured request validation.
 
 # Core Features
 
--   Versioned REST API (/api/v1)
--   Cookie-based JWT authentication
--   Refresh token rotation (hashed + DB persisted)
--   Email verification via token
--   Password reset flow
--   Route-level rate limiting
--   Zod request validation
--   MongoDB TTL cleanup for tokens
--   Centralized error handling
-
-
+* Versioned REST API (`/api/v1`)
+* Cookie-based JWT authentication
+* Refresh token rotation with database persistence
+* Email verification via token system
+* Secure password reset flow
+* Route-level rate limiting
+* Request validation using **Zod**
+* Automatic token cleanup using **MongoDB TTL indexes**
+* Centralized error handling middleware
 
 # Project Structure
 
-    src/
-    ├── app.js
-    ├── loadEnv.js
-    ├── server.js
-    ├── constants/
-    ├── controllers/
-    ├── db/
-    ├── middlewares/
-    ├── models/
-    ├── routes/
-    ├── utils/
-    └── validations/
-
-
+```
+src/
+├── app.js
+├── loadEnv.js
+├── server.js
+│
+├── constants/
+│
+├── controllers/
+│   ├── auth.controller.js
+│   └── notes.controller.js
+│
+├── db/
+│   └── connectDB.js
+│
+├── middlewares/
+│   ├── auth.middleware.js
+│   ├── errorHandler.middleware.js
+│   ├── rateLimiter.middleware.js
+│   └── validate.middleware.js
+│
+├── models/
+│   ├── user.model.js
+│   ├── note.model.js
+│   └── token.model.js
+│
+├── routes/
+│   ├── auth.routes.js
+│   └── note.routes.js
+│
+├── utils/
+│   ├── ApiError.js
+│   ├── sendEmail.js
+│   ├── token.utils.js
+│   └── logger.js
+│
+└── validations/
+    ├── auth.schema.js
+    └── note.schema.js
+```
 
 # Authentication System
 
--   Access tokens (short-lived)
--   Refresh tokens (long-lived, hashed in DB)
--   Device-scoped sessions
--   HTTP-only cookies
--   Refresh token rotation on every use
--   Logout invalidates refresh token
+The authentication architecture is designed to be **secure and session-aware**.
 
+Features include:
 
+* Short-lived **Access Tokens**
+* Long-lived **Refresh Tokens**
+* Refresh tokens stored **hashed in the database**
+* **Refresh token rotation** on every refresh request
+* **Device-scoped sessions** for improved security
+* Tokens delivered through **HTTP-only cookies**
+* Logout invalidates the stored refresh token
+
+Authentication Flow:
+
+1. User logs in
+2. Server issues:
+
+   * Access Token
+   * Refresh Token
+3. Access token authenticates API requests
+4. When expired, refresh token generates a new access token
+5. Refresh token is rotated and previous token becomes invalid
 
 # Notes System
 
--   Authenticated users can:
-    -   Create notes
-    -   Update notes
-    -   Delete notes
-    -   Fetch notes
--   Ownership enforced via userID checks
--   Validation enforced via Zod schemas
+Authenticated users can perform full CRUD operations on notes.
 
+Supported operations:
 
+* Create notes
+* Retrieve notes
+* Update notes
+* Delete notes
+
+Security rules:
+
+* Every note is linked to a **user ID**
+* Access control ensures users can only manage **their own notes**
+* All request payloads validated using **Zod schemas**
 
 # Security Features
 
--   HTTP-only cookies
--   Secure flag enabled in production
--   Rate limiting per sensitive route
--   Hashed refresh tokens
--   Centralized error handling
--   Input validation middleware
+The backend implements several security best practices:
 
-
+* HTTP-only cookies for token storage
+* Secure cookie flag enabled in production
+* Route-level rate limiting for sensitive endpoints
+* Refresh tokens stored **hashed** in the database
+* Centralized error handling
+* Strict input validation
+* Email verification before full account activation
 
 # Environment Variables
 
-Required:
+Required environment variables:
 
 ```
 PORT=
+
 DB_CONNECT_STRING=
+
 ACCESS_TOKEN_SECRET=
 REFRESH_TOKEN_SECRET=
+
 ACCESS_TOKEN_EXPIRY=
 REFRESH_TOKEN_EXPIRY=
+
 CORS_ORIGIN=
 CLIENT_URL=
+
 EMAIL_USER=
 BREVO_API_KEY=
 ```
 
-
-
 # Local Development
 
-npm install Create .env file npm run dev
+Install dependencies:
 
-Server runs on configured PORT.
+```
+npm install
+```
 
+Create a `.env` file with the required environment variables.
 
+Start development server:
+
+```
+npm run dev
+```
+
+The server will run on the configured `PORT`.
 
 # License
 
