@@ -15,49 +15,6 @@ The system implements **cookie-based JWT authentication with refresh token rotat
 * Automatic token cleanup using **MongoDB TTL indexes**
 * Centralized error handling middleware
 
-# Project Structure
-
-```
-src/
-├── app.js
-├── loadEnv.js
-├── server.js
-│
-├── constants/
-│
-├── controllers/
-│   ├── auth.controller.js
-│   └── notes.controller.js
-│
-├── db/
-│   └── connectDB.js
-│
-├── middlewares/
-│   ├── auth.middleware.js
-│   ├── errorHandler.middleware.js
-│   ├── rateLimiter.middleware.js
-│   └── validate.middleware.js
-│
-├── models/
-│   ├── user.model.js
-│   ├── note.model.js
-│   └── token.model.js
-│
-├── routes/
-│   ├── auth.routes.js
-│   └── note.routes.js
-│
-├── utils/
-│   ├── ApiError.js
-│   ├── sendEmail.js
-│   ├── token.utils.js
-│   └── logger.js
-│
-└── validations/
-    ├── auth.schema.js
-    └── note.schema.js
-```
-
 # Authentication System
 
 The authentication architecture is designed to be **secure and session-aware**.
